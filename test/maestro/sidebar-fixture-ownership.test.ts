@@ -184,15 +184,19 @@ describe("sidebar fixture pane quiescing", {
 }, () => {
 	it("stops a pane that keeps spawning, and lets an in-flight herdr request finish", async () => {
 		const dir = mkdtempSync(join(tmpdir(), "pi-sidebar-quiesce-"));
-		// A stand-in for an in-flight `herdr` CLI request: one second of work,
+		// A stand-in for an in-flight `herdr` CLI request: two seconds of work,
 		// beside a shell that forks back to back, bounded, so the race is real.
+		// Completion is measured from spawn, not from first observation: under
+		// load the polling loop can first notice the request near the end of its
+		// sleep, which used to fail the duration assertion without any kill.
 		symlinkSync("/bin/sleep", join(dir, "herdr"));
 		const pane = `quiesce-${process.pid}`;
+		const spawnedAt = Date.now();
 		const shell = spawn(
 			"/bin/bash",
 			[
 				"-c",
-				`"${dir}/herdr" 1 & for i in $(seq 2000); do sleep 30 & done; wait`,
+				`"${dir}/herdr" 2 & for i in $(seq 200); do sleep 30 & done; wait`,
 			],
 			{
 				detached: true,
@@ -212,15 +216,27 @@ describe("sidebar fixture pane quiescing", {
 				)?.pid;
 			}
 			assert.ok(request, "the stand-in request started");
-			assert.ok(paneProcesses(scope).length > 2, "the pane kept spawning");
-			const startedAt = Date.now();
+			// Forking lags under load, so wait for the spawning instead of
+			// asserting it once.
+			let spawned = paneProcesses(scope).length;
+			for (let attempt = 0; attempt < 250 && spawned <= 2; attempt++) {
+				await delay(20);
+				spawned = paneProcesses(scope).length;
+			}
+			assert.ok(spawned > 2, "the pane kept spawning");
 			assert.deepEqual(await quiescePane(scope, 10_000), []);
 			assert.ok(
-				Date.now() - startedAt >= 500,
+				Date.now() - spawnedAt >= 1500,
 				"the in-flight request ran to completion instead of being killed",
 			);
-			await delay(300);
-			assert.deepEqual(paneProcesses(scope), []);
+			// Reaping lags under load, so poll for the empty pane instead of
+			// sleeping once.
+			let remaining = paneProcesses(scope);
+			for (let attempt = 0; attempt < 50 && remaining.length > 0; attempt++) {
+				await delay(100);
+				remaining = paneProcesses(scope);
+			}
+			assert.deepEqual(remaining, []);
 		} finally {
 			try {
 				process.kill(-shell.pid, "SIGKILL");
