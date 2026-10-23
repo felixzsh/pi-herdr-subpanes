@@ -1333,14 +1333,29 @@ function resolveInterruptTarget(params: {
 	name?: string;
 }): { running: RunningSubagent } | { error: string } {
 	const requestedId = params.id?.trim();
+	const requestedName = params.name?.trim();
 	if (requestedId) {
 		const running = runningSubagents.get(requestedId);
-		return running
-			? { running }
-			: { error: `No running subagent with id "${requestedId}".` };
+		if (running) return { running };
+		// A display name passed as id is a common coordinator mistake (the
+		// spawn ack and completion notices only recently started carrying the
+		// routable id). Fall back to name resolution instead of failing outright.
+		const fallback = requestedName ?? requestedId;
+		const matches = Array.from(runningSubagents.values()).filter(
+			(running) => running.name === fallback,
+		);
+		if (matches.length === 1) return { running: matches[0] };
+		if (matches.length === 0) {
+			return { error: `No running subagent with id "${requestedId}".` };
+		}
+		const candidates = matches
+			.map((running) => `${running.name} [${running.id}]`)
+			.join(", ");
+		return {
+			error: `Ambiguous subagent name "${fallback}". Matches: ${candidates}`,
+		};
 	}
 
-	const requestedName = params.name?.trim();
 	if (!requestedName) {
 		return { error: "Provide a running subagent id or exact display name." };
 	}
@@ -2115,7 +2130,7 @@ function deliverPersistentTaskEvent(
 			api.sendMessage(
 				{
 					customType: "subagent_ping",
-					content: `Persistent specialist "${running.name}" requests help for task ${event.task}:\n\n${event.message ?? ""}\n\nReply with subagent_send to ${running.name}.`,
+					content: `Persistent specialist "${running.name}" requests help for task ${event.task}:\n\n${event.message ?? ""}\n\nReply with subagent_send {"id": "${running.id}", "message": "..."} (name "${running.name}" also works while unambiguous).`,
 					display: true,
 					details: {
 						name: running.name,
@@ -2143,7 +2158,7 @@ function deliverPersistentTaskEvent(
 		const summary = io.readTaskSummary(asPiRecord(running));
 		sendSubagentResult(
 			api,
-			`Persistent specialist "${running.name}" completed task ${event.task} (${completed} tasks completed) and is idle and accepting subagent_send.\n\n${summary}`,
+			`Persistent specialist "${running.name}" completed task ${event.task} (${completed} tasks completed) and is idle and accepting subagent_send. Resume it with subagent_send {"id": "${running.id}", "message": "..."} (name "${running.name}" also works while unambiguous).\n\n${summary}`,
 			{
 				name: running.name,
 				task: event.task,
@@ -3008,9 +3023,14 @@ export default function subagentsExtension(
 									? ` in worktree ${running.worktree.path} on branch ${running.worktree.branch}. `
 									: ". ") +
 								launchDiagnosticsText(running.worktree?.diagnostics, "", " ") +
-								`Do NOT generate or assume any results — you have no idea what the sub-agent will do or produce. ` +
-								`The results will be delivered to you automatically as a steer message when the sub-agent finishes. ` +
-								`Until then, move on to other work or tell the user you're waiting.`,
+								(running.persistent
+									? `Persistent specialist "${params.name}": send follow-up tasks with subagent_send {"id": "${running.id}", "message": "..."}. The name "${params.name}" also works while unambiguous. Record this id outside this turn — tool details do not survive context compaction. ` +
+										`Do NOT generate or assume any results — you have no idea what the sub-agent will do or produce. ` +
+										`The results will be delivered to you automatically as a steer message when the sub-agent finishes. ` +
+										`Until then, move on to other work or tell the user you're waiting.`
+									: `Do NOT generate or assume any results — you have no idea what the sub-agent will do or produce. ` +
+										`The results will be delivered to you automatically as a steer message when the sub-agent finishes. ` +
+										`Until then, move on to other work or tell the user you're waiting.`),
 						},
 					],
 					details: startedDetails,
@@ -3103,11 +3123,12 @@ export default function subagentsExtension(
 			name: "subagent_send",
 			label: "Send Persistent Task",
 			description:
-				"Deliver one follow-up task to an idle persistent specialist. Busy specialists reject tasks; no queue is kept.",
+				"Deliver one follow-up task to an idle persistent specialist. Use the id from the spawn acknowledgement or the completion notice; the specialist name also works while unambiguous. Busy specialists reject tasks; no queue is kept.",
 			parameters: Type.Object({
 				id: Type.Optional(
 					Type.String({
-						description: "Exact persistent specialist logical ID",
+						description:
+							"Routable persistent specialist id from the spawn acknowledgement or completion notice (a display name also resolves while unambiguous)",
 					}),
 				),
 				name: Type.Optional(
@@ -3146,7 +3167,8 @@ export default function subagentsExtension(
 			parameters: Type.Object({
 				id: Type.Optional(
 					Type.String({
-						description: "Exact persistent specialist logical ID",
+						description:
+							"Routable persistent specialist id from the spawn acknowledgement or completion notice (a display name also resolves while unambiguous)",
 					}),
 				),
 				name: Type.Optional(

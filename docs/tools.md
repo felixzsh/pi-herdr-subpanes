@@ -189,6 +189,8 @@ Set `persistent: true` on a `subagent` launch to create one logical specialist w
 
 The initial task and each `subagent_send({ id|name, message })` task are delivered exactly once with a task ID. A specialist accepts one task at a time. Sends while it is working are recorded as `rejected-busy`; no queue is retained. After a task result arrives, it is idle and accepts the next task. A persistent child's `caller_ping` records a help request but keeps the session alive; answer with `subagent_send`.
 
+The routable `id` is printed in the spawn acknowledgement and in every completion notice — record it outside the turn (e.g. a loop state file), because tool details do not survive context compaction. The specialist name also resolves while unambiguous. If an `id` lookup misses, the host falls back to name resolution before erroring, so a display name passed as `id` still reaches a uniquely named specialist.
+
 Use `subagent_stop({ id|name })` to request graceful shutdown. If a task is active, stop becomes `stop-pending` and the task reaches its terminal outcome first. The parent reports `stopped` only after process-exit evidence is confirmed, then closes an ordinary pane it created and releases the name. If confirmation times out, the specialist is `stalled` in an unconfirmed-stop state: `subagent_send` rejects follow-up work while retaining evidence. Request `subagent_stop` again to make another bounded exit check, or spawn a new specialist. A pane or process disappearance without a stop directive produces one facts-only crash notice; persistent sessions cannot be resumed in v1, so spawn a new specialist. There is no automatic restart, replay, or revival.
 
 A persistent specialist with a worktree holds that lease for its entire lifetime. It cannot be re-bound to another checkout. Otherwise it runs in an ordinary pane.
@@ -205,7 +207,7 @@ subagent_interrupt({ name: "Scout" });
 
 This sends Escape to the child pane, cancelling the in-progress model turn. The subagent session stays alive — the pane, session file, and background polling all remain intact. After the interrupt, the widget immediately labels the child as `interrupted` (counted as **open**, not active processing). Stale pre-interrupt activity snapshots are ignored so a lagging Herdr/`active` reading cannot overwrite the interrupt. The process elapsed timer keeps running because the pane is still open; only the interrupted-state duration freezes relative to the interrupt request. If the child starts work later, newer observations return it to `active`; completion, failure, and `caller_ping` still flow through normally.
 
-`id` and `name` are each optional, but execution requires one usable target: an exact running ID or an exact, unambiguous display name. When both are supplied, `id` is used. Duplicate names are rejected.
+`id` and `name` are each optional, but execution requires one usable target: an exact running ID or an exact, unambiguous display name. When both are supplied, `id` is tried first and the host falls back to `name` if the id lookup misses. Duplicate names are rejected.
 
 This is a turn-level interrupt, not a method for forcibly terminating a subagent session. To end the run, use `subagent_cancel`.
 

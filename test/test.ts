@@ -10389,6 +10389,44 @@ describe("subagent interruption", () => {
 		}
 	});
 
+	it("falls back to name resolution when the id lookup misses", () => {
+		const testApi = subagentsModule.__test__;
+		const runningMap = testApi.runningSubagents;
+		runningMap.clear();
+
+		try {
+			runningMap.set(
+				"logical-1",
+				makeRunning({
+					id: "logical-1",
+					name: "realtime-worker",
+					surface: "logical-1",
+					sessionFile: "logical-1.jsonl",
+					persistent: true,
+				}),
+			);
+
+			// Display name passed as id (the pre-fix coordinator mistake).
+			const byNameAsId = testApi.resolveInterruptTarget({
+				id: "realtime-worker",
+			});
+			assert.equal(byNameAsId.running.id, "logical-1");
+
+			// Wrong id plus a valid name still reaches the specialist.
+			const byFallbackName = testApi.resolveInterruptTarget({
+				id: "stale-id",
+				name: "realtime-worker",
+			});
+			assert.equal(byFallbackName.running.id, "logical-1");
+
+			// Unknown id with no name match keeps the original error.
+			const missing = testApi.resolveInterruptTarget({ id: "stale-id" });
+			assert.match(missing.error, /No running subagent with id "stale-id"/);
+		} finally {
+			runningMap.clear();
+		}
+	});
+
 	it("returns an explicit error when Escape delivery fails", async () => {
 		const testApi = subagentsModule.__test__;
 		let aborted = false;

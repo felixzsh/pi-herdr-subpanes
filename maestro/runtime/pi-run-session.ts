@@ -216,6 +216,9 @@ export interface PiStartedMetadata {
 	worktree?: PiWorktreeLaunch;
 	warning?: string;
 	status: "started";
+	persistent?: boolean;
+	logicalId?: string;
+	generationId?: string;
 }
 // pi-herdr-agents extension
 export interface PiCompletedMetadata {
@@ -840,6 +843,9 @@ export function createDefaultRunSession(
 				worktree: child.worktree,
 				warning,
 				status: "started",
+				persistent: child.persistent,
+				logicalId: child.logicalId,
+				generationId: child.generationId,
 			},
 		};
 		if (suppressed)

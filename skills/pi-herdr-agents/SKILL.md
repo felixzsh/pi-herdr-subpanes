@@ -114,6 +114,10 @@ tools, model, thinking, and worktree binding are fixed at launch.
 
 - `subagent_send({ id|name, message })` delivers one task, exactly once. One task
   at a time: a send while busy is `rejected-busy`; nothing is queued.
+- The routable `id` is printed in the spawn acknowledgement and in every
+  completion notice — record it outside the turn, because tool details do not
+  survive context compaction. The name also resolves while unambiguous, and an
+  `id` miss falls back to name resolution before erroring.
 - `subagent_stop({ id|name })` is graceful: with an active task it becomes
   `stop-pending`, the task finishes first, and `stopped` is reported only after
   process-exit evidence.
@@ -135,7 +139,7 @@ tools, model, thinking, and worktree binding are fixed at launch.
 | Close the pane, kill the process, Ctrl-C by hand | Avoid | See fallback gotcha | Can launch a replacement run |
 
 `id` or `name` must be an exact running ID or an exact, unambiguous name; `id`
-wins if both are given.
+is tried first and falls back to `name` if it misses.
 
 ## Cancelling an ordinary child: `subagent_cancel`
 
