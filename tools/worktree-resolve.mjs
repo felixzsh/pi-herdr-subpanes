@@ -21,7 +21,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { createRequire } from "node:module";
+import { createRequire, registerHooks } from "node:module";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -45,7 +45,7 @@ function mainCheckoutNodeModules() {
 
 const fallback = mainCheckoutNodeModules();
 
-export async function resolve(specifier, context, nextResolve) {
+function resolveBareSpecifier(specifier, context, nextResolve) {
 	try {
 		return await nextResolve(specifier, context);
 	} catch (error) {
@@ -67,3 +67,7 @@ export async function resolve(specifier, context, nextResolve) {
 		return nextResolve(pathToFileURL(resolved).href, context);
 	}
 }
+
+// `--import` runs this module but does not install hooks by itself, so register
+// the resolver here. Without this the hook is dead code.
+registerHooks({ resolve: resolveBareSpecifier });
