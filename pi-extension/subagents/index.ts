@@ -6,12 +6,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "@sinclair/typebox";
-import {
-	Box,
-	Text,
-	truncateToWidth,
-	visibleWidth,
-} from "@earendil-works/pi-tui";
+import { Box, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { join } from "node:path";
 import { existsSync, statSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -55,6 +50,14 @@ import {
 	type ThinkingLevel,
 } from "../../maestro/core/routing.ts";
 import { wrapPiModelRegistry } from "./model-registry.ts";
+import {
+	borderLine,
+	configureWidgets,
+	refreshWidgets,
+	stopWidgets,
+	renderSubagentWidgetLines as renderWidgetSubagentLines,
+	type SubagentWidgetEntry,
+} from "./widgets.ts";
 import {
 	loadModelConfig,
 	resolveModelDefault,
@@ -118,7 +121,6 @@ import type {
 // Survive /reload: replace presentation timers while keeping active completion
 // watchers and their registry alive. Old module closures continue watching the
 // children; the reloaded module adopts the shared registry for status/interrupts.
-const WIDGET_INTERVAL_KEY = Symbol.for("pi-subagents/widget-interval");
 const STATUS_INTERVAL_KEY = Symbol.for("pi-subagents/status-interval");
 const RUNTIME_KEY = Symbol.for("pi-subagents/runtime");
 
@@ -141,15 +143,6 @@ function getFirstText(
 }
 
 {
-	const prevInterval =
-		readGlobalSlot<ReturnType<typeof setInterval>>(WIDGET_INTERVAL_KEY);
-	if (prevInterval) {
-		clearInterval(prevInterval);
-		writeGlobalSlot<ReturnType<typeof setInterval> | null>(
-			WIDGET_INTERVAL_KEY,
-			null,
-		);
-	}
 	const prevStatusInterval =
 		readGlobalSlot<ReturnType<typeof setInterval>>(STATUS_INTERVAL_KEY);
 	if (prevStatusInterval) {
@@ -872,6 +865,11 @@ const runtime: SubagentRuntime = readGlobalSlot<SubagentRuntime>(
 writeGlobalSlot(RUNTIME_KEY, runtime);
 const runningSubagents = runtime.runningSubagents;
 
+configureWidgets({
+	context: () => runtime.latestCtx,
+	subagents: subagentWidgetEntries,
+});
+
 export function shouldPreserveSubagentsOnShutdown(
 	reason: SessionShutdownEvent["reason"] | undefined,
 ): boolean {
@@ -912,209 +910,36 @@ export function selectCompletionApi<T>(previous: T, current: T | undefined): T {
 
 // ── Widget management ──
 
-/** Interval timer for widget re-renders. */
-let widgetInterval: ReturnType<typeof setInterval> | null = null;
-
 /** Interval timer for status transition checks. */
 let statusInterval: ReturnType<typeof setInterval> | null = null;
 
-function formatElapsedMMSS(startTime: number, endTime = Date.now()): string {
-	const seconds = Math.floor((endTime - startTime) / 1000);
-	const m = Math.floor(seconds / 60);
-	const s = seconds % 60;
-	return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
-
-const ACTIVE_ACCENT = "\x1b[38;2;77;163;255m";
-const OPEN_ACCENT = "\x1b[38;2;214;158;46m";
-const RST = "\x1b[0m";
-
-/**
- * Build a bordered content line: │left          right│
- * Left content is truncated if needed, right is preserved, padded to fill width.
- */
-function borderLine(
-	left: string,
-	right: string,
-	width: number,
-	accent = ACTIVE_ACCENT,
-): string {
-	if (width <= 0) return "";
-	if (width === 1) return `${accent}│${RST}`;
-
-	// width = total visible chars for the whole line including │ and │
-	const contentWidth = Math.max(0, width - 2); // space inside the two │ chars
-	const rightVis = visibleWidth(right);
-
-	// If the status chunk alone is too wide, prefer preserving it in compact form
-	// rather than overflowing the terminal.
-	if (rightVis >= contentWidth) {
-		const truncRight = truncateToWidth(right, contentWidth);
-		const rightPad = Math.max(0, contentWidth - visibleWidth(truncRight));
-		return `${accent}│${RST}${truncRight}${" ".repeat(rightPad)}${accent}│${RST}`;
-	}
-
-	const maxLeft = Math.max(0, contentWidth - rightVis);
-	const truncLeft = truncateToWidth(left, maxLeft);
-	const leftVis = visibleWidth(truncLeft);
-	const pad = Math.max(0, contentWidth - leftVis - rightVis);
-	return `${accent}│${RST}${truncLeft}${" ".repeat(pad)}${right}${accent}│${RST}`;
-}
-
-/**
- * Build the bordered top line: ╭─ Title ──── info ─╮
- * All chars are accounted for within `width`.
- */
-function borderTop(
-	title: string,
-	info: string,
-	width: number,
-	accent = ACTIVE_ACCENT,
-): string {
-	if (width <= 0) return "";
-	if (width === 1) return `${accent}╭${RST}`;
-
-	// ╭─ Title ───...─── info ─╮
-	// overhead: ╭─ (2) + space around title (2) + space around info (2) + ─╮ (2) = but we simplify
-	const inner = Math.max(0, width - 2); // inside ╭ and ╮
-	const titlePart = `─ ${title} `;
-	const infoPart = ` ${info} ─`;
-	const fillLen = Math.max(0, inner - titlePart.length - infoPart.length);
-	const fill = "─".repeat(fillLen);
-	const content = `${titlePart}${fill}${infoPart}`
-		.slice(0, inner)
-		.padEnd(inner, "─");
-	return `${accent}╭${content}╮${RST}`;
-}
-
-/**
- * Build the bordered bottom line: ╰──────────────────╯
- */
-function borderBottom(width: number, accent = ACTIVE_ACCENT): string {
-	if (width <= 0) return "";
-	if (width === 1) return `${accent}╰${RST}`;
-
-	const inner = Math.max(0, width - 2);
-	return `${accent}╰${"─".repeat(inner)}╯${RST}`;
-}
-
-function formatLifecycleWidgetLabel(
-	projection: ReturnType<typeof projectLifecycle>,
-	now: number,
-): string {
-	const duration =
-		projection.stateDurationSince == null
-			? ""
-			: ` ${formatElapsedDuration(now - projection.stateDurationSince)}`;
-	if (projection.kind === "active")
-		return projection.label
-			? ` active · ${projection.label}${duration} `
-			: ` active${duration} `;
-	if (projection.kind === "blocked") return ` blocked${duration} `;
-	if (projection.kind === "running") return " running… ";
-	if (projection.kind === "waiting") return ` waiting${duration} `;
-	if (projection.kind === "interrupted") return ` interrupted${duration} `;
-	if (projection.kind === "stalled") return ` stalled${duration} `;
-	// completed/failed exist as lifecycle projections for delivery bookkeeping,
-	// but the row is removed immediately after result delivery — so the only
-	// visible terminal handoff label is finalizing.
-	if (
-		projection.kind === "finalizing" ||
-		projection.kind === "completed" ||
-		projection.kind === "failed"
-	) {
-		return " finalizing… ";
-	}
-	return " starting… ";
+function subagentWidgetEntries(): SubagentWidgetEntry[] {
+	return Array.from(runningSubagents.values()).map((running) => ({
+		startTime: running.startTime,
+		name: running.name,
+		agent: running.agent,
+		runtimePlan: running.runtimePlan,
+		cancelState: running.cancelState,
+		lifecycle: ensureLifecycle(running),
+		statusEnabled: statusConfig.enabled,
+	}));
 }
 
 function renderSubagentWidgetLines(
-	agents: RunningSubagent[],
+	agents: readonly RunningSubagent[],
 	width: number,
 ): string[] {
-	const now = Date.now();
-	const rendered = agents.map((agent) => ({
-		agent,
-		projection: projectLifecycle(ensureLifecycle(agent), now),
-	}));
-	const activeCount = rendered.filter(
-		({ projection }) =>
-			projection.kind === "active" ||
-			projection.kind === "starting" ||
-			projection.kind === "running" ||
-			projection.kind === "blocked",
-	).length;
-	const openCount = agents.length - activeCount;
-	const info =
-		activeCount > 0
-			? openCount > 0
-				? `${activeCount} active · ${openCount} open`
-				: `${activeCount} active`
-			: `${openCount} open`;
-	const accent = activeCount > 0 ? ACTIVE_ACCENT : OPEN_ACCENT;
-
-	const lines: string[] = [borderTop("Subagents", info, width, accent)];
-
-	for (const { agent, projection } of rendered) {
-		const elapsed = formatElapsedMMSS(
-			agent.startTime,
-			projection.runtimeEndedAt ?? now,
-		);
-		const agentTag = agent.agent ? ` (${agent.agent})` : "";
-		const left = ` ${elapsed}  ${agent.name}${agentTag} `;
-		const runtimeTag = agent.runtimePlan
-			? `${agent.runtimePlan.modelId}|${agent.runtimePlan.thinking} · `
-			: "";
-		const label =
-			agent.cancelState === "unconfirmed"
-				? "cancel unconfirmed"
-				: agent.cancelState
-					? "cancelling…"
-					: undefined;
-		const right = label
-			? ` ${runtimeTag}${label} `
-			: statusConfig.enabled
-				? ` ${runtimeTag}${formatLifecycleWidgetLabel(projection, now).trim()} `
-				: ` ${runtimeTag}starting… `;
-
-		lines.push(borderLine(left, right, width, accent));
-	}
-
-	lines.push(borderBottom(width, accent));
-	return lines;
-}
-
-function updateWidget() {
-	const latestCtx = runtime.latestCtx;
-	if (!latestCtx?.hasUI) return;
-
-	if (runningSubagents.size === 0) {
-		latestCtx.ui.setWidget("subagent-status", undefined);
-		if (widgetInterval) {
-			clearInterval(widgetInterval);
-			widgetInterval = null;
-			writeGlobalSlot<ReturnType<typeof setInterval> | null>(
-				WIDGET_INTERVAL_KEY,
-				null,
-			);
-		}
-		return;
-	}
-
-	latestCtx.ui.setWidget(
-		"subagent-status",
-		(_tui: any, _theme: any) => {
-			return {
-				invalidate() {},
-				render(width: number) {
-					return renderSubagentWidgetLines(
-						Array.from(runningSubagents.values()),
-						width,
-					);
-				},
-			};
-		},
-		{ placement: "aboveEditor" },
+	return renderWidgetSubagentLines(
+		agents.map((running) => ({
+			startTime: running.startTime,
+			name: running.name,
+			agent: running.agent,
+			runtimePlan: running.runtimePlan,
+			cancelState: running.cancelState,
+			lifecycle: ensureLifecycle(running),
+			statusEnabled: statusConfig.enabled,
+		})),
+		width,
 	);
 }
 
@@ -1698,7 +1523,7 @@ async function handleSubagentInterrupt(
 	}
 
 	running.lifecycle = markInterruptRequested(ensureLifecycle(running), now);
-	updateWidget();
+	refreshWidgets();
 
 	return {
 		content: [
@@ -1769,7 +1594,7 @@ async function handleSubagentCancel(
 			? await session.cancel(id).catch(() => undefined)
 			: undefined;
 		if (!id || !report) return fail(resolved.error);
-		updateWidget();
+		refreshWidgets();
 		return {
 			content: [
 				{ type: "text" as const, text: cancelStatusText(id, report, false) },
@@ -1796,7 +1621,7 @@ async function handleSubagentCancel(
 	} catch (error) {
 		return fail(error instanceof Error ? error.message : String(error), target);
 	} finally {
-		updateWidget();
+		refreshWidgets();
 	}
 	const details: SubagentCancelDetails = { ...target, status: report.status };
 	if (report.requestedAt !== undefined)
@@ -1875,7 +1700,7 @@ function startStatusRefresh(pi: ExtensionAPI) {
 			}
 		}
 
-		if (shouldRefreshWidget) updateWidget();
+		if (shouldRefreshWidget) refreshWidgets();
 
 		if (transitionLines.length > 0) {
 			const capped = capStatusLines(transitionLines, statusConfig.lineLimit);
@@ -1934,15 +1759,6 @@ export const __test__ = {
 	runningSubagents,
 	formatElapsed,
 };
-
-function startWidgetRefresh() {
-	if (widgetInterval) return;
-	updateWidget(); // immediate first render
-	widgetInterval = setInterval(() => {
-		updateWidget();
-	}, 1000);
-	writeGlobalSlot(WIDGET_INTERVAL_KEY, widgetInterval);
-}
 
 function normalizePiAttempt(
 	params: typeof SubagentParams.static,
@@ -2248,7 +2064,7 @@ function deliverPiCompletion(
 	if (!shouldDeliverSubagentCompletion(running)) {
 		running.lifecycle = markDelivery(running.lifecycle, "suppressed");
 		runningSubagents.delete(running.id);
-		updateWidget();
+		refreshWidgets();
 		return "suppressed";
 	}
 	const api = runtime.pi!;
@@ -2272,13 +2088,13 @@ function deliverPiCompletion(
 		} else if (running.stopState !== "failed")
 			notifyPersistentCrash(running, api, io, result.worktree);
 		runningSubagents.delete(running.id);
-		updateWidget();
+		refreshWidgets();
 		return "delivered";
 	}
 	// Preserve ordinary mark-delivered/delete-before-send and failed-send retention.
 	running.lifecycle = markDelivery(running.lifecycle, "delivered");
 	runningSubagents.delete(running.id);
-	updateWidget();
+	refreshWidgets();
 	const cancellation = result.run.cancellation;
 	if (cancellation) {
 		const details: SubagentResultDetails = {
@@ -2395,7 +2211,7 @@ export default function subagentsExtension(
 			hooks: {
 				onSpawned(record) {
 					runningSubagents.set(record.id, record);
-					startWidgetRefresh();
+					refreshWidgets();
 					startStatusRefresh(runtime.pi!);
 				},
 				onObserved(record, observation) {
@@ -2412,7 +2228,7 @@ export default function subagentsExtension(
 						observation.kind !== "tick" &&
 						observation.kind !== "refresh"
 					)
-						updateWidget();
+						refreshWidgets();
 				},
 				onSettled: deliverPiCompletion,
 			},
@@ -2499,22 +2315,14 @@ export default function subagentsExtension(
 			...refreshedGuidelines,
 		);
 		if (runningSubagents.size > 0) {
-			startWidgetRefresh();
+			refreshWidgets();
 			startStatusRefresh(pi);
-			updateWidget();
 		}
 	});
 
 	// Clean up on session shutdown
 	pi.on("session_shutdown", async (event, _ctx) => {
-		if (widgetInterval) {
-			clearInterval(widgetInterval);
-			widgetInterval = null;
-			writeGlobalSlot<ReturnType<typeof setInterval> | null>(
-				WIDGET_INTERVAL_KEY,
-				null,
-			);
-		}
+		stopWidgets();
 		if (statusInterval) {
 			clearInterval(statusInterval);
 			statusInterval = null;
@@ -2734,7 +2542,7 @@ export default function subagentsExtension(
 					// Delivery failure retains manual panes; no second send or cleanup producer.
 					if (!session.getTask(id)) {
 						runningSubagents.delete(running.id);
-						updateWidget();
+						refreshWidgets();
 					}
 				});
 				return {
@@ -3213,7 +3021,7 @@ export default function subagentsExtension(
 					.catch(() => {
 						if (!session.getTask(controlTaskId)) {
 							runningSubagents.delete(id);
-							updateWidget();
+							refreshWidgets();
 						}
 					});
 
