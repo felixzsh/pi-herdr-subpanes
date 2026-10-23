@@ -199,15 +199,76 @@ isolated Herdr tree, not parent-model latency; raw samples are written to
 
 ## Pane placement
 
-`panes.mode` defaults to `"grouped"` when omitted. Ordinary public `subagent` and `subagent_resume` launches, including bare forks, fill extension-owned `Agents`, `Agents 2`, etc. tabs in the target checkout's existing workspace. `panes.maxPerTab` is a positive safe integer, defaults to `4`, and counts all live panes in each owned tab, including user-added panes and retained shells. Overlapping launches in one parent respect this cap. It is independent of `persistent.maxAgents`.
+`panes.mode` defaults to `"grouped"` when omitted. Ordinary public `subagent` and
+`subagent_resume` launches, including bare forks, fill extension-owned `Agents`,
+`Agents 2`, etc. tabs in the target checkout's existing workspace. Shell jobs
+always use grouped placement in the sibling `shells`, `shells-2`, etc. family.
+`panes.maxPerTab` is a positive safe integer, defaults to `4`, and counts all
+live panes in each family tab, including user-added panes and retained shells.
+`panes.direction` selects the split direction for both families. These settings
+are independent of `persistent.maxAgents`.
 
-Checkout matching uses Herdr's canonical `worktree.checkout_path` and includes descendant directories. Shell working directories do not establish workspace ownership. If no checkout matches (including non-Git directories), placement uses the caller's workspace; overflow never creates a workspace. A reviewer with `cwd` set to a managed checkout joins that workspace without creating another worktree. Resume placement uses the saved session's cwd.
+Tab placement is stateless: it reads Herdr's `tab list` and `pane list` instead
+of keeping an in-memory map. A tab whose label belongs to a family (`Agents`,
+`Agents 2`, …; `shells`, `shells-2`, …) is adopted by that family, including a
+tab the user created by hand. A tab without a family label is never touched.
+Placement splits the last pane of the first family tab that still has fewer than
+`maxPerTab` live panes; when none has room it creates the next free tab index
+for that family. No pane is reused: every launch creates a new pane, and a
+closed pane is never revived.
 
-Explicit `panes.mode: "tab"` preserves one new tab per ordinary child in the caller's workspace. Explicit `"split"` preserves splits of the stable parent pane. `panes.direction` is `"right"` (default) or `"down"` and applies to grouped and legacy splits. `maxPerTab` does not affect these legacy modes. Managed worktrees retain their separate workspaces.
+`maxPerTab` is a target, not a lock. Two Pi processes in the same workspace can
+split the same tab at once and leave it one pane over the cap; this drains as
+panes close and does not break anything. There is no placement lock.
 
-Ownership is tracked by returned pane/tab/workspace IDs, never labels. Separate parent processes own separate groups; `/reload` preserves a parent's in-memory ownership, but a full restart does not adopt old tabs. Placement never moves existing panes or renames user tabs. Background launches preserve focus; Herdr may resize sibling panes when splitting or closing. User-added panes are never closed by automatic tab cleanup. An owned tab remains reusable while user panes remain, even after all child panes close.
+Checkout matching uses Herdr's canonical `worktree.checkout_path` and includes
+descendant directories. Shell working directories do not establish workspace
+ownership. If no checkout matches (including non-Git directories), placement
+uses the caller's workspace; overflow never creates a workspace. A reviewer with
+`cwd` set to a managed checkout joins that workspace without creating another
+worktree. Resume placement uses the saved session's cwd.
 
-Run `/reload` after changing role, model, or pane settings.
+Explicit `panes.mode: "tab"` preserves one new tab per ordinary child in the
+caller's workspace. Explicit `"split"` preserves splits of the stable parent
+pane. `panes.direction` is `"right"` (default) or `"down"` and applies to
+grouped and legacy splits. `maxPerTab` does not affect these legacy modes, and
+they do not apply to shell jobs. Managed worktrees retain their separate
+workspaces.
+
+Placement never moves existing panes or renames user tabs. Background launches
+preserve focus; Herdr may resize sibling panes when splitting or closing.
+User-added panes are never closed by automatic cleanup. Run `/reload` after
+changing role, model, or pane settings.
+
+## Shell jobs
+
+`bg_shell` runs one long non-interactive command in a `shells` pane and returns
+immediately. `bg_shell_status` lists jobs, reads a bounded log fragment, or
+cancels one. See [Background shell jobs](tools.md#background-shell-jobs) for
+parameters and job states.
+
+State lives under `$PI_CODING_AGENT_DIR/shells/`, default
+`~/.pi/agent/shells/`. Set `PI_SHELLS_DIR` to an absolute path to move the whole
+root. The directory holds `runner.sh`, one job record per job under `jobs/`,
+combined output under `logs/`, the atomic result marker under `status/`, and the
+exact command under `commands/`. The earlier `~/.pi/agent/bg-shell/` directory
+is neither migrated nor read.
+
+Finished jobs and their files are pruned after 14 days. A `running` job is never
+pruned. Reconcile runs at session start, every 10 seconds, and before each
+`bg_shell_status` call, and it only watches jobs this session owns or may adopt.
+
+Delivery contract:
+
+- Only the owner announces a job: the session that started it, or its parent
+  when the caller was a child.
+- A parent adopts a child's job only after this process observed the child's
+  completion, and it persists the announce intent before delivering.
+- A runtime never settles a foreign job. If the owner dies without an observed
+  completion, the job stays `running` and must be closed explicitly with
+  `bg_shell_status cancel`.
+- A shell pane has no agent, so `agent_status` is always `unknown`; prompt
+  detection uses the pane's foreground process instead.
 
 ## Model resolution and fallback
 

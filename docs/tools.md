@@ -6,7 +6,7 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 
 ### Extensions
 
-**Subagents** — 10 parent-session tools + 3 commands, plus 2 child-only tools:
+**Subagents** — 11 host tools + 3 commands, plus 2 child-only tools:
 
 | Tool                 | Description                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------- |
@@ -18,6 +18,8 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 | `subagents_list`     | List available agent definitions                                                            |
 | `worktree_list` | Parent-only inspect-only inventory of managed worktrees and cleanup blockers |
 | `worktree_remove` | Parent-only explicit removal by `target` path, branch, or workspace ID; optional `preserve: true` commits dirty state first |
+| `bg_shell` | Run one long non-interactive command asynchronously in a `shells` pane (async — returns immediately) |
+| `bg_shell_status` | List jobs, get job detail, read a bounded log fragment, or cancel a job |
 | `subagent_resume`    | Resume a previous Pi-backed sub-agent session in a new ordinary pane (async)                          |
 
 | Skill | Description |
@@ -227,6 +229,93 @@ Termination follows surface ownership:
 - **Managed worktree:** the retained root pane, workspace, checkout, branch, commits, and manifest are kept. At launch, the child records its own process identity (PID, kernel start time, boot ID, and PID namespace) beside its session; the parent accepts it only while that process is alive in the parent's PID namespace as the Herdr pane shell or a descendant of it. SIGTERM goes only to that identity, re-verified immediately before the signal. Confirmation requires that identity to no longer exist, or the pane to be gone while it is not known alive. Command-line text and Herdr's foreground list are never evidence, because Pi rewrites its process title. A live identity (for example a suspended Pi), or one whose SIGTERM fails while it is still alive, leaves termination `unconfirmed` even if the pane is gone. An identity that was not captured (including on non-Linux hosts), is unreadable, or whose PID now names another process is never signalled and leaves termination `unconfirmed` unless pane absence confirms it. Every Herdr query and capture wait is bounded by the cancel's deadline (5 seconds); an answer that arrives after the deadline is ignored, even if it settles before the timer runs, and never changes a reported outcome. A retry re-checks, and if the launch capture expired it captures the identity again within its own deadline. The manifest becomes `cancelled` only after confirmed termination (a parent shutdown while unconfirmed records the plain shutdown state), and the normal worktree handoff is delivered. No Git cleanup is performed. See [Worktree subagents](worktree-subagents.md).
 
 Do not poll after cancelling; the cancelled result arrives as a steer message. Design rationale: [ADR-0014](adr/0014-operator-cancel-terminal-intent.md).
+
+## Background shell jobs
+
+A shell job is one non-interactive shell command that runs in a pane of the
+workspace's extension-owned `shells` tab family. It is supervised without model
+calls, and the session that asked for it is resumed automatically when it
+finishes. `panes.maxPerTab` and `panes.direction` govern `shells` panes exactly
+as they govern `Agents` panes. Shell jobs never use `worktree`.
+
+### `bg_shell`
+
+Start a long-running command and return immediately with a job id:
+
+```text
+bg_shell({ command: "npm test", cwd: "/repo", label: "unit tests" })
+```
+
+| Parameter | Required | Meaning |
+| --- | --- | --- |
+| `command` | yes | Shell command to run. It must be non-interactive. Keep it streaming. |
+| `cwd` | no | Working directory. Defaults to the current session cwd and must exist. |
+| `label` | no | Short human-readable name for the job and its pane. |
+
+The tool requires Herdr (`HERDR_ENV=1`). It returns `id`, `tab`, `pane`, and
+`log`, and does not wait for the command. Do not poll; the completion notice
+arrives as a steer message. Use `bash` instead for quick, interactive, or
+ordering-critical commands. Never pipe a long-running command into `tail`,
+`head`, or `grep` inside the command string: the pipeline buffers output, so
+the pane and log stay empty until the end. Let output flow and read bounded
+fragments afterwards with `bg_shell_status`.
+
+### `bg_shell_status`
+
+```text
+bg_shell_status({ action?: "list" | "get" | "log" | "cancel",
+                  job_id?, all?, mode?: "head" | "tail", lines?, grep? })
+```
+
+| Parameter | Meaning |
+| --- | --- |
+| `action` | `list` (default), `get`, `log`, or `cancel`. |
+| `job_id` | Job id, required for `get`, `log`, and `cancel`. |
+| `all` | Widen the list and job lookup to every Pi session, not only this one. |
+| `mode` | For `log`: read from the `head` or `tail`. Default `tail`. |
+| `lines` | For `log`: 1–400 lines, default 100. Out-of-range values are clamped. |
+| `grep` | For `log`: keep only lines matching this regular expression. |
+
+`list` shows running jobs and up to 10 recent finished ones, newest first. By
+default it covers jobs started by this session and jobs its children started.
+`get` returns the job's facts and a bounded tail preview. `log` returns the
+requested head or tail fragment; the read window is capped at 512 KB and the
+rendered output at 8 KB. `cancel` marks a running job `cancelled`, persists it,
+and closes its pane without waiting for the process to confirm.
+
+### Job states
+
+| State | Meaning |
+| --- | --- |
+| `running` | The command is still executing, or its result is not yet observable. |
+| `succeeded` | The runner recorded exit code 0. |
+| `failed` | The runner recorded a non-zero exit code. |
+| `unknown` | The pane disappeared, the process died without a result marker, or the command never started. Never reported as success. |
+| `cancelled` | An explicit `bg_shell_status cancel` settled the job. |
+| `error` | The pane could not be created or the command could not be launched. |
+
+State is settled by an atomic result marker written by the runner, an explicit
+cancel, or a launch failure, never by parsing pane output. A silent process is
+therefore not mistaken for a finished one. A shell pane has no agent, so its
+Herdr `agent_status` is always `unknown`; prompt detection uses the pane's
+foreground process instead.
+
+### Delivery and ownership
+
+- Only the owning session announces a job: the session that started it, or its
+  parent when the caller was a child.
+- A parent may adopt a child's job only after this process observed that child
+  complete, fail, or be cancelled. Adoption announces the result once.
+- A runtime never settles another session's job, not even silently. If the owner
+  dies without an observed completion, the job stays `running` and is resolved
+  explicitly with `bg_shell_status cancel`. This is deliberate: a foreign
+  runtime that settled it would steal the notice from a possibly live owner.
+- State lives under `$PI_CODING_AGENT_DIR/shells/` (default
+  `~/.pi/agent/shells/`), overridable with `PI_SHELLS_DIR`. Finished jobs and
+  their files are pruned after 14 days; a `running` job is never pruned.
+
+Both tools are available in the parent session and in children;
+`spawning: false` does not deny them. They are not part of `SPAWNING_TOOLS`.
 
 ## caller_ping — Child-to-Parent Help Request
 

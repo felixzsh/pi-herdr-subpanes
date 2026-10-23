@@ -163,10 +163,35 @@ _Avoid_: Work queue, mutable task list
 
 **Agents tab**:
 An extension-owned Herdr tab grouping delegated child panes in an existing
-checkout workspace. Ownership comes from returned IDs, not its display label.
-The pane cap includes every live pane; overflow creates another tab, not a
-workspace. Separate parent processes own separate groups.
-_Avoid_: Agent workspace, label-based ownership, automatic rearrangement
+checkout workspace. It belongs to the `agents` family of the shared placement
+service. The `Agents`, `Agents 2`, etc. label declares family belonging, so such
+a tab is adopted even when the user created it; a tab without a family label is
+never touched. The pane cap counts every live pane in the tab; overflow creates
+another family tab, not a workspace. A launched surface is still owned by the
+IDs returned for it, not by the tab label.
+_Avoid_: Agent workspace, label-less ownership, automatic rearrangement
+
+**Surface placement**:
+The single stateless allocator that turns one surface request into a pane in
+Herdr. It serves two families with their own labels: `agents` (`Agents`,
+`Agents 2`, …) and `shells` (`shells`, `shells-2`, …). It resolves the target
+workspace, reads `tab list` and `pane list`, adopts a family-labelled tab by
+label, and splits its last pane or creates the next family tab without stealing
+focus. `panes.maxPerTab` is a target rather than a concurrency lock: two
+processes may briefly exceed it and it drains as panes close. Placement never
+closes a surface.
+_Avoid_: In-memory tab map, per-family allocator, pane reuse, placement lock
+
+**Shell job**:
+One non-interactive shell command hosted in a `shells` pane and supervised
+without model calls. Its state lives under `$PI_CODING_AGENT_DIR/shells/` and
+is settled by the runner's atomic result marker, an explicit cancel, or a
+launch failure, never by parsing pane output: `running`, `succeeded`, `failed`,
+`unknown`, `cancelled`, or `error`. `unknown` never means success.
+Only the owning session announces a result; a parent adopts a child's job only
+after observing that child finish, and a job whose owner died unobserved stays
+`running` until an explicit `bg_shell_status cancel`.
+_Avoid_: Agent run, model turn, pane-output parsing, silent adoption
 
 **Retained checkout shell**:
 The interactive shell in a managed worktree's root pane, preserved after the

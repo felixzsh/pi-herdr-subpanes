@@ -226,6 +226,58 @@ describe("pack-neutral package contents", () => {
 				assert.doesNotMatch(path, /orchestrate|plan/);
 	});
 
+	it("keeps shell job documentation aligned with the registered tools", () => {
+		const skill = readDoc("skills/pi-herdr-agents/SKILL.md");
+		for (const name of ["bg_shell", "bg_shell_status"])
+			for (const [label, content] of [
+				["README", readme],
+				["docs/tools.md", toolsDoc],
+				["docs/configuration.md", configurationDoc],
+				["skills/pi-herdr-agents/SKILL.md", skill],
+			])
+				assert.ok(
+					normalized(content).includes(name),
+					`${label} must document ${name}`,
+				);
+		for (const state of [
+			"running",
+			"succeeded",
+			"failed",
+			"unknown",
+			"cancelled",
+			"error",
+		])
+			assert.ok(
+				toolsDoc.includes(`| \`${state}\` |`),
+				`docs/tools.md must document the ${state} job state`,
+			);
+		for (const parameter of [
+			"action",
+			"job_id",
+			"all",
+			"mode",
+			"lines",
+			"grep",
+		])
+			assert.ok(
+				toolsDoc.includes(`| \`${parameter}\` |`),
+				`docs/tools.md must document bg_shell_status.${parameter}`,
+			);
+		const config = normalized(configurationDoc);
+		assert.ok(
+			config.includes("PI_SHELLS_DIR"),
+			"configuration must document PI_SHELLS_DIR",
+		);
+		assert.ok(
+			config.includes("14 days"),
+			"configuration must document retention",
+		);
+		assert.ok(
+			config.includes("`shells`") && config.includes("`Agents`"),
+			"configuration must document both placement families",
+		);
+	});
+
 	it("locks fork override semantics in the tools and roles references", () => {
 		assert.ok(
 			normalized(toolsDoc).includes(

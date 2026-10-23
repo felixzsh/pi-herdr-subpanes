@@ -4,7 +4,7 @@ These instructions apply to humans and coding agents changing `pi-herdr-agents`.
 
 ## What this package is
 
-`pi-herdr-agents` (Pi Herdr Agents) is a Pi extension that launches asynchronous Pi child agents exclusively in Herdr. Ordinary runs group child panes in extension-owned `Agents` tabs by default. Writing tasks may opt into one isolated Herdr-managed Git worktree per branch. Legacy role definitions that request an external CLI fail before Herdr creates resources.
+`pi-herdr-agents` (Pi Herdr Agents) is a Pi extension that launches asynchronous Pi child agents exclusively in Herdr. Ordinary runs group child panes in extension-owned `Agents` tabs by default. It also runs `bg_shell` jobs in a sibling `shells` tab family with the same pane policy. Writing tasks may opt into one isolated Herdr-managed Git worktree per branch. Legacy role definitions that request an external CLI fail before Herdr creates resources.
 
 The package is a pack-neutral execution host: it ships no agent roles and no planning or review workflows. Its only skill is `pi-herdr-agents`, a general operating guide for the host; do not add methodology or workflow skills here. Roles come from project or global definitions and separately installed role packs. Do not add bundled roles, a privileged default pack, or name-keyed workflow behavior; see [ADR-0013](docs/adr/0013-pack-neutral-execution-host.md).
 
@@ -33,7 +33,10 @@ Former bundled roles, `/plan`, its plan skill, and `/skill:orchestrate` now belo
 - `maestro/core/worktree.ts`, `worktree-cleanup.ts` — manifest schema/state, handoff types, and cleanup eligibility/formatting
 - `maestro/adapters/pi/` — `PiHarnessAdapter`, launch transactions, completion evidence, session I/O, activity files, and SDK model glue
 - `maestro/adapters/pi/child/subagent-done.ts` — child protocol: `caller_ping`, `subagent_done`, and activity recording
-- `maestro/surfaces/herdr/` — `HerdrSurfaceProvider`, Herdr CLI driver, and terminal scripts/placement, plus `herdr-socket.ts` for socket pane metadata
+- `maestro/surfaces/herdr/` — `HerdrSurfaceProvider`, Herdr CLI driver, terminal scripts, and `herdr-socket.ts` for socket pane metadata; `placement.ts` is the sole family-aware allocator for the `agents` and `shells` tab families
+- `maestro/core/shell-jobs/` — shell job types/seams, on-disk state store and 14-day pruning, and the `runner.sh` wrapper
+- `maestro/runtime/shell-jobs.ts`, `herdr-shell-surface.ts` — shell job supervision, reconciliation, owner-only delivery, and its Herdr surface
+- `pi-extension/subagents/shell-jobs.ts`, `widgets.ts` — shell job completion notice/delivery and the single status widget coordinator (shells above subagents)
 - `maestro/runtime/` — `RunSession`, Pi composition, run ownership, controls/retries, observation, delivery-gated cleanup, worktree operations/handoff, plus `delegated-marker.ts` for delegated-child sidebar markers
 - `maestro/adapters/fake/`, `maestro/surfaces/fake/`, `test/maestro/` — conformance fakes, seam tests, and the dependency-rule test
 - `CONTEXT.md` — orchestration-domain glossary
@@ -75,6 +78,9 @@ Read [`docs/worktree-subagents.md`](docs/worktree-subagents.md) before changing 
 When behavior changes, update every affected surface in the same commit:
 
 - public tool parameters or lifecycle → `docs/tools.md`, plus the `README.md` summary when everyday use changes
+- shell job states, ownership/adoption, or delivery → `docs/tools.md`, `docs/configuration.md`, and `skills/pi-herdr-agents/SKILL.md`
+- shell job state root, retention, or `PI_SHELLS_DIR` → `docs/configuration.md`
+- surface placement families, label adoption, or `panes.maxPerTab`/`panes.direction` scope → `docs/configuration.md` and `CONTEXT.md`
 - configuration keys or model routing → `docs/configuration.md`, plus the `README.md` summary when everyday use changes
 - role-pack protocol or role frontmatter → `docs/roles.md`
 - troubleshooting steps → `docs/troubleshooting.md`
@@ -119,7 +125,7 @@ Use `PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 npm run te
 Before committing:
 
 - inspect `git status` and the final diff;
-- confirm the package preview includes `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/subagents/index.ts`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-agents/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`, plans, journals, sessions, prototypes, generated evidence, local config, and `openspec/`;
+- confirm the package preview includes `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/subagents/index.ts`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-agents/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`, plans, journals, sessions, shell job state, prototypes, generated evidence, local config, and `openspec/`;
 - run `npm pack --dry-run` when package contents or documentation paths changed; durable configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, never package-root `config.json` (move old files manually);
 - confirm that no generated plans, journals, sessions, provider configuration, test scripts, or review artifacts are staged; and
 - confirm that no accidental empty directory exists at the repository root:

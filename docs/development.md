@@ -22,11 +22,23 @@ provider; fakes are for conformance tests only.
   model SDK glue, and registry projection behind `PiHarnessAdapter`;
   `child/subagent-done.ts` implements the child protocol.
 - `maestro/surfaces/herdr/` — `HerdrSurfaceProvider`, Herdr CLI driver,
-  terminal scripts/placement, and `herdr-socket.ts`, the bounded socket
-  client for pane metadata.
+  terminal scripts, and `herdr-socket.ts`, the bounded socket client for pane
+  metadata. `placement.ts` is the sole family-aware surface allocator for the
+  `agents` and `shells` tab families: it resolves the workspace, adopts family
+  tabs statelessly from `tab list`/`pane list`, and applies `panes.maxPerTab`
+  and `panes.direction`.
+- `maestro/core/shell-jobs/` — shell job domain types and seams, the on-disk
+  state store (records, logs, atomic result markers, 14-day pruning), and the
+  `runner.sh` wrapper.
+- `maestro/runtime/shell-jobs.ts`, `herdr-shell-surface.ts` — shell job
+  supervision, wake/sweep, reconciliation, owner-only delivery, and the Herdr
+  surface behind it.
 - `maestro/runtime/` — run ownership, controls/retries, observation,
   delivery-gated cleanup, Pi composition, worktree operations/handoff, and
   sidebar markers (`delegated-marker.ts`).
+- `pi-extension/subagents/widgets.ts`, `shell-jobs.ts` — the single status
+  widget coordinator (shells above subagents) and the shell-job completion
+  notice renderer and delivery.
 - `plugins/sidebar/` — the optional Herdr plugin. Its `sidebar.mjs` uses Node
   built-ins only and imports nothing from the extension, so Herdr can install
   the directory by itself.

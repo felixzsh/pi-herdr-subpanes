@@ -1,6 +1,6 @@
 ---
 name: pi-herdr-agents
-description: Operate the pi-herdr-agents host. Use when asked to launch, delegate to, supervise, interrupt, cancel, stop, resume, or clean up Pi subagents; to use worktrees, persistent specialists, or model routing; to edit the host's config.json or model preferences; to install, configure, troubleshoot, or uninstall the optional Herdr sidebar plugin; or when a child looks hung, stalled, or unwanted.
+description: Operate the pi-herdr-agents host. Use when asked to launch, delegate to, supervise, interrupt, cancel, stop, resume, or clean up Pi subagents; to run or inspect background shell jobs; to use worktrees, persistent specialists, or model routing; to edit the host's config.json or model preferences; to install, configure, troubleshoot, or uninstall the optional Herdr sidebar plugin; or when a child looks hung, stalled, or unwanted.
 ---
 
 # pi-herdr-agents operating guide
@@ -29,6 +29,33 @@ request) is delivered to you as one bounded `subagent_result` message that
 starts a new turn. Never sleep, loop, tail session files, or repeatedly list
 status to wait. If a child is merely slow, do nothing. Stalled or no-progress
 notices are facts, not instructions to act.
+
+## Background shell jobs: `bg_shell`, not polling
+
+`bg_shell({ command, cwd?, label? })` starts one long, non-interactive command
+in a `shells` pane and returns a job id at once. Use it instead of `bash` for
+full builds, entire test suites, long migrations, or anything likely to take
+several minutes and safe to run without interaction. Keep `bash` for quick,
+interactive, or ordering-critical commands that must finish before the next
+step.
+
+- Do not poll. Continue other work or stop; the completion notice arrives as a
+  steer message with the exit code and a bounded log tail.
+- Keep the command streaming. Never pipe a long-running command into `tail`,
+  `head`, or `grep` inside the command string: the pipeline buffers output, so
+  the pane and log stay empty until the end. Let output flow and read bounded
+  fragments afterwards with `bg_shell_status({ action: "log", job_id,
+  mode: "tail", lines, grep })`.
+- `bg_shell_status({ action: "list" })` shows running and recent jobs;
+  `action: "get"` shows one job's facts and preview.
+- To stop a job, use `bg_shell_status({ action: "cancel", job_id })`. It marks
+  the job `cancelled` and closes its pane immediately. Do not close the pane by
+  hand, and do not expect a prompt from the process.
+- A job left `running` after its owning session died unobserved is closed the
+  same way, with `cancel`. Only the owner announces a result; a parent adopts a
+  child's job only after observing that child finish.
+- State lives under `$PI_CODING_AGENT_DIR/shells/`; finished jobs are pruned
+  after 14 days. `PI_SHELLS_DIR` overrides the root.
 
 ## Launching: `subagent` parameters
 
@@ -239,7 +266,7 @@ configuration error, so a stale section is reported instead of ignored.
 | `models.default` | Model for children that specify none |
 | `models.agents` | Per-role model, keyed by role name |
 | `persistent.maxAgents` | Retained specialist cap (default 3) |
-| `supervision.*`, `panes.*` | Transport, hang advisory minutes, pane grouping |
+| `supervision.*`, `panes.*` | Transport, hang advisory minutes, pane grouping; `panes.direction` and `panes.maxPerTab` govern both `Agents` and `shells` |
 | `roles.bundled` | Deprecated no-op; remove it |
 
 Model values must be exact authenticated IDs. Put a role's model in its `.md`

@@ -29,6 +29,31 @@ The widget shows `stalled` when pane inspection fails or the pane disappears wit
 
 If a child sits on a `Trust project folder?` prompt, the pane is waiting for an answer nobody can give. A child inherits the parent session's project-trust decision for its own run, so this only happens when the parent itself is untrusted: trust the source repository in the parent, or launch the child with `cwd` inside a trusted path. A managed worktree needs no separate trust entry.
 
+## A shell job stays `running`
+
+A shell job is announced only by the session that owns it; a parent adopts a
+child's job only after observing that child finish. If the owning session died
+without an observed completion, nothing settles the job and it stays `running`
+on purpose rather than let a foreign runtime steal a notice from a possibly live
+owner. Close it explicitly:
+
+```text
+bg_shell_status({ action: "cancel", job_id: "sh_..." })
+```
+
+`cancel` marks the job `cancelled`, persists it, and closes its pane. Use
+`bg_shell_status({ action: "get", job_id })` to confirm the state, and
+`action: "log"` with a bounded `mode`/`lines`/`grep` to inspect output. A shell
+pane has no agent, so Herdr `agent_status` is always `unknown` there; prompt
+detection uses the pane's foreground process. While the runner or a child holds
+that foreground process the job is still live, and a prompt that returns without
+a result marker settles the job as `unknown`, never as success.
+
+Job state lives under `$PI_CODING_AGENT_DIR/shells/` by default
+(`~/.pi/agent/shells/`) and finished jobs are pruned after 14 days. If state
+looks stale or misplaced, check `PI_SHELLS_DIR` if it is set. See
+[Background shell jobs](tools.md#background-shell-jobs).
+
 ## A model fails
 
 A catalog-listed model and configured authentication do not prove that your provider account can use the model. The completion keeps each raw provider reason with its model. Check account access, launch a new subagent with a supported model, or configure a fallback. See [Model resolution and fallback](configuration.md#model-resolution-and-fallback).

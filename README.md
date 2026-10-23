@@ -26,6 +26,7 @@ Delegate investigation, implementation, and review without blocking the parent s
 - **Parallel execution.** Run independent scouts, workers, and reviewers at the same time.
 - **Live supervision.** Pi's subagent widget tracks process and turn state. You can interrupt one child turn without ending its session.
 - **Managed worktrees.** Writing agents can run in retained Herdr workspaces with explicit Git ownership and recovery details.
+- **Background shell jobs.** `bg_shell` runs one long non-interactive command in a `shells` pane and resumes the session with its exit code and log output when it finishes.
 - **Conversation handoff.** `/worktree` continues the active Pi conversation in a new worktree and keeps the parent session.
 - **Pack-neutral roles.** Use project or global definitions and installable role packs. This package ships no default roles or workflows.
 - **Persistent specialists.** Keep one policy-bound Pi session for sequential, turn-based tasks.
@@ -106,7 +107,7 @@ The parent is the coordinator. Give each child one bounded outcome with its goal
 
 ![Pi Herdr Agents lifecycle: spawn a child, run it in Herdr, supervise live state, and deliver one bounded result to the parent.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-agents/main/docs/assets/async-subagent-lifecycle.png)
 
-A `subagent` call selects the target checkout, reuses its Herdr workspace, and gives the child a pane in an extension-owned `Agents` tab. Four panes fit in each tab by default, and overflow opens another tab in the same workspace. The call launches a child Pi session and returns `started`. The parent watches Herdr process state and child activity and shows the result in a live widget:
+A `subagent` call selects the target checkout, reuses its Herdr workspace, and gives the child a pane in an extension-owned `Agents` tab. Four panes fit in each tab by default, and overflow opens another tab in the same workspace. Shell jobs use a separate extension-owned `shells` tab family in the selected checkout workspace. `panes.maxPerTab` and `panes.direction` govern both families, so the same cap and split direction apply to `Agents` and `shells`. The call launches a child Pi session and returns `started`. The parent watches Herdr process state and child activity and shows the result in a live widget:
 
 ```text
 ╭─ Subagents ──────────────────── 1 active · 1 open ─╮
@@ -136,6 +137,8 @@ The parent session gets these tools:
 | `subagents_list` | List agent definitions, live specialists, and the supervision mode. |
 | `worktree_list` | List managed worktrees and what blocks their cleanup. |
 | `worktree_remove` | Remove one managed worktree on explicit request. |
+| `bg_shell` | Run one long non-interactive command asynchronously in a `shells` pane and return at once. |
+| `bg_shell_status` | List jobs, read a bounded log fragment, or cancel a job. |
 
 Children get `caller_ping` to ask the parent for help. Interactive children also get `subagent_done` to mark themselves complete.
 
@@ -291,7 +294,7 @@ The durable configuration file is `$PI_CODING_AGENT_DIR/herdr-agents/config.json
 | `models.default`, `models.agents` | none | Model defaults, global and per agent. |
 | `persistent.maxAgents` | `3` | How many persistent specialists can stay open. |
 | `supervision.forcePolling`, `supervision.hangWarningMinutes` | `false`, `15` | Supervision transport and no-progress advisories. |
-| `panes.mode`, `panes.direction`, `panes.maxPerTab` | `"grouped"`, `"right"`, `4` | Where child panes open. |
+| `panes.mode`, `panes.direction`, `panes.maxPerTab` | `"grouped"`, `"right"`, `4` | Where child panes open. `direction` and `maxPerTab` also govern `shells` panes. |
 | `sidebar.enabled` | `false` | Pane markers for the sidebar plugin. |
 
 See [Configuration](docs/configuration.md) for every key.
@@ -302,6 +305,7 @@ See [Configuration](docs/configuration.md) for every key.
 - The extension creates Herdr panes, tabs and managed worktrees only when a launch asks for them. It never pushes, merges, opens pull requests, deletes branches or removes worktrees on its own; cleanup is an explicit parent action ([worktree cleanup](docs/tools.md#explicit-worktree-cleanup)).
 - What it writes: per-launch artifacts under the parent session's `artifacts/<session-id>/` directory beside Pi's session store, which hold the child's full task text and any `systemPrompt` as Markdown files, activity snapshots and worktree manifests; and the child's own Pi session file. A managed worktree that carries its own `.pi/agent` directory receives that child's session inside the checkout. Treat task text as potentially sensitive when you share or inspect those files.
 - Managed worktree children record their PID, process start time, boot ID, and PID namespace in `<session>.process.json` beside their session. With [`sidebar.enabled`](docs/configuration.md#sidebar-markers), the parent reads each child pane's agent session from Herdr and reports one display-only pane token, `piha_delegated_v1`, on that pane through the Herdr socket. With the setting off, the extension writes no pane metadata.
+- Shell job state lives under `$PI_CODING_AGENT_DIR/shells/` (default `~/.pi/agent/shells/`). Set `PI_SHELLS_DIR` to override that root. Finished jobs and their files are retained for 14 days; a running job is never pruned. The earlier standalone `herdr-background-shell` extension is retired, and `PI_BG_SHELL_DISABLED` no longer applies. If you installed that extension, delete or rename `~/.pi/agent/extensions/herdr-background-shell/` and use `bg_shell` from this package instead.
 - To uninstall: first list and remove any retained worktrees while the extension is still loaded (`/worktree list`, then `/worktree remove <target>`), because those commands leave with the package. If you installed the optional sidebar plugin, remove it with `herdr plugin uninstall pi-herdr-agents.sidebar` (or `herdr plugin unlink` for a linked copy). Then run `pi remove npm:pi-herdr-agents`, and delete `$PI_CODING_AGENT_DIR/herdr-agents/` and the `artifacts/` directories above if you no longer want the configuration and launch records.
 
 ## Troubleshooting
@@ -318,7 +322,7 @@ More checks are in [Troubleshooting](docs/troubleshooting.md).
 | Page | Contents |
 | --- | --- |
 | [Tools and lifecycle](docs/tools.md) | Every tool and command, parameters, status labels, persistent specialists, interrupt, cancel, resume, and `/worktree` |
-| [Configuration](docs/configuration.md) | `config.json`, model preferences, sidebar markers, supervision, and pane placement |
+| [Configuration](docs/configuration.md) | `config.json`, model preferences, sidebar markers, supervision, pane placement, and shell jobs |
 | [Roles and custom agents](docs/roles.md) | Discovery, frontmatter reference, tool access control, and role packs |
 | [Worktree subagents](docs/worktree-subagents.md) | Worktree operation, review, recovery, and cleanup |
 | [Troubleshooting](docs/troubleshooting.md) | Completion delivery and other common problems |
