@@ -45,7 +45,7 @@ function mainCheckoutNodeModules() {
 
 const fallback = mainCheckoutNodeModules();
 
-function resolveBareSpecifier(specifier, context, nextResolve) {
+async function resolveBareSpecifier(specifier, context, nextResolve) {
 	try {
 		return await nextResolve(specifier, context);
 	} catch (error) {
