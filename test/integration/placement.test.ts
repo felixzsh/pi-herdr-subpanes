@@ -309,13 +309,14 @@ writeFileSync(${JSON.stringify(report)}, JSON.stringify(result));
 				(child) =>
 					snapshot.find((pane) => pane.pane_id === child.surface)!.tab_id,
 			);
-			assert.equal(new Set(childTabs.slice(0, 4)).size, 1);
-			assert.notEqual(childTabs[4], childTabs[0]);
-			assert.notEqual(
+			assert.equal(
 				childTabs[0],
 				userTab.tab.tab_id,
-				"a matching display label never grants ownership",
+				"a family label grants adoption",
 			);
+			assert.equal(new Set(childTabs.slice(0, 3)).size, 1);
+			assert.equal(childTabs[3], childTabs[4]);
+			assert.notEqual(childTabs[3], userTab.tab.tab_id);
 			assert.equal(getFocusedSurface(backend), focus);
 
 			closePane(children[0].surface);
@@ -368,7 +369,7 @@ writeFileSync(${JSON.stringify(report)}, JSON.stringify(result));
 				panes(env.workspaceId).find((pane) => pane.pane_id === next.surface)
 					?.tab_id,
 				childTabs[0],
-				"the ID-owned Agents tab remains reusable with only a user pane",
+				"the labeled Agents tab remains reusable with only user panes",
 			);
 			closePane(next.surface);
 			assert.deepEqual(

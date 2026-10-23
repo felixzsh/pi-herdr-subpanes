@@ -1,7 +1,6 @@
 import { execFile, execSync, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import { realpathSync } from "node:fs";
-import { resolve, relative, isAbsolute, sep } from "node:path";
 import {
 	isBoolean,
 	isFiniteNumber,
@@ -17,10 +16,20 @@ import {
 	type ReleasedPrimaryWorkspaceClaim,
 } from "../../core/opened-primary-workspace.ts";
 import { WorktreeProvisioningError } from "../../core/surface-provider.ts";
+import {
+	listWorkspacePanes,
+	placeSplitSurface,
+	placeSurface,
+	placeTabSurface,
+} from "./placement.ts";
 
 const execFileAsync = promisify(execFile);
 
 const commandAvailability = new Map<string, boolean>();
+
+// Close guard only: worktree root panes stay open in every outcome. This is not
+// placement ownership, which is derived per call by the placement module.
+const retainedPaneIds = new Set<string>();
 
 function hasCommand(command: string): boolean {
 	if (commandAvailability.has(command)) {
@@ -57,7 +66,7 @@ export function isHerdrAvailable(): boolean {
 	return process.env.HERDR_ENV === "1" && hasCommand("herdr");
 }
 
-function parseHerdrJson(value: string) {
+export function parseHerdrJson(value: string) {
 	try {
 		return JSON.parse(value);
 	} catch {
@@ -65,7 +74,7 @@ function parseHerdrJson(value: string) {
 	}
 }
 
-function extractHerdrPaneId(output: string, context: string): string {
+export function extractHerdrPaneId(output: string, context: string): string {
 	const parsed = parseHerdrJson(output);
 	const paneId = parsed?.result?.pane?.pane_id;
 	if (!isString(paneId) || !paneId) {
@@ -76,7 +85,10 @@ function extractHerdrPaneId(output: string, context: string): string {
 	return paneId;
 }
 
-function extractHerdrRootPaneId(output: string, context: string): string {
+export function extractHerdrRootPaneId(
+	output: string,
+	context: string,
+): string {
 	const parsed = parseHerdrJson(output);
 	const paneId = parsed?.result?.root_pane?.pane_id;
 	if (!isString(paneId) || !paneId) {
@@ -130,7 +142,7 @@ type HerdrExecForTest = (
 
 let herdrExecForTest: HerdrExecForTest | undefined;
 
-function herdrExec(args: string[], timeout?: number): string {
+export function herdrExec(args: string[], timeout?: number): string {
 	if (herdrExecForTest) {
 		const result = herdrExecForTest(args, timeout, "sync");
 		if (!isString(result)) {
@@ -159,7 +171,7 @@ async function herdrExecAsync(
 	return stdout;
 }
 
-function getHerdrParentPaneId(): string {
+export function getHerdrParentPaneId(): string {
 	const paneId = process.env.HERDR_PANE_ID;
 	if (!paneId) {
 		throw new Error("HERDR_PANE_ID not set");
@@ -177,7 +189,7 @@ interface HerdrCurrentPaneInfo {
 	workspace_id: string;
 }
 
-function getHerdrCurrentPaneInfo(): HerdrCurrentPaneInfo {
+export function getHerdrCurrentPaneInfo(): HerdrCurrentPaneInfo {
 	// Inherited IDs go stale after a pane moves. Herdr resolves the calling
 	// terminal's original identity to its live pane, tab, and workspace.
 	const output = herdrExec(buildCurrentPaneArgs());
@@ -197,41 +209,6 @@ function getHerdrCurrentPaneInfo(): HerdrCurrentPaneInfo {
 		tab_id: pane.tab_id,
 		workspace_id: pane.workspace_id,
 	};
-}
-
-function buildTabCreateArgs(
-	name: string,
-	cwd: string,
-	workspaceId: string,
-): string[] {
-	return [
-		"tab",
-		"create",
-		"--workspace",
-		workspaceId,
-		"--label",
-		name,
-		"--cwd",
-		cwd,
-		"--no-focus",
-	];
-}
-
-function buildPaneSplitArgs(
-	parentPaneId: string,
-	direction: "right" | "down",
-	cwd: string,
-): string[] {
-	return [
-		"pane",
-		"split",
-		parentPaneId,
-		"--direction",
-		direction,
-		"--no-focus",
-		"--cwd",
-		cwd,
-	];
 }
 
 function buildWorktreeCreateArgs(
@@ -256,73 +233,7 @@ function buildWorktreeCreateArgs(
 }
 
 export function createHerdrSurface(name: string, cwd = process.cwd()): string {
-	// Legacy tab mode targets the caller workspace explicitly; Herdr's
-	// implicit default may be another workspace.
-	const { workspace_id: workspaceId } = getHerdrCurrentPaneInfo();
-	const output = herdrExec(buildTabCreateArgs(name, cwd, workspaceId));
-	const paneId = extractHerdrRootPaneId(output, "tab create");
-	try {
-		herdrExec(["pane", "rename", paneId, name]);
-	} catch {
-		// Optional — pane label is cosmetic.
-	}
-	return paneId;
-}
-
-interface OwnedAgentsTab {
-	workspaceId: string;
-	panes: Set<string>;
-	retainedPaneId?: string;
-}
-
-// In-memory ownership survives /reload, not process restart. Separate parent
-// processes never adopt tabs by label or share a capacity reservation.
-const agentsTabsKey = Symbol.for("pi-herdr-subagents:agents-tabs");
-// SAFETY: this extension alone writes this process-local symbol.
-const placementGlobal = globalThis as typeof globalThis & {
-	[agentsTabsKey]?: Map<string, OwnedAgentsTab>;
-};
-const agentsTabs = (placementGlobal[agentsTabsKey] ??= new Map<
-	string,
-	OwnedAgentsTab
->());
-
-function canonicalPath(path: string): string {
-	try {
-		return realpathSync(path);
-	} catch {
-		return resolve(path);
-	}
-}
-
-function containsCwd(root: string, cwd: string): boolean {
-	const child = relative(root, cwd);
-	return (
-		child === "" ||
-		(child !== ".." && !child.startsWith(`..${sep}`) && !isAbsolute(child))
-	);
-}
-
-function placementPanes(): Array<{
-	pane_id: string;
-	tab_id: string;
-	workspace_id: string;
-}> {
-	const parsed = parseHerdrJson(herdrExec(["pane", "list"]));
-	const panes = parsed?.result?.panes;
-	if (
-		parsed?.result?.type !== "pane_list" ||
-		!Array.isArray(panes) ||
-		panes.some(
-			(pane) =>
-				!isString(pane?.pane_id) ||
-				!isString(pane?.tab_id) ||
-				!isString(pane?.workspace_id),
-		)
-	) {
-		throw new Error("Unexpected herdr pane list output for placement");
-	}
-	return panes;
+	return placeTabSurface({ name, cwd });
 }
 
 export function createHerdrGroupedSurface(
@@ -331,83 +242,13 @@ export function createHerdrGroupedSurface(
 	maxPerTab: number,
 	direction: "right" | "down",
 ): string {
-	const callerWorkspace = getHerdrCurrentPaneInfo().workspace_id;
-	const parsed = parseHerdrJson(herdrExec(["workspace", "list"]));
-	const workspaces = parsed?.result?.workspaces;
-	if (parsed?.result?.type !== "workspace_list" || !Array.isArray(workspaces)) {
-		throw new Error("Unexpected herdr workspace list output for placement");
-	}
-	const panes = placementPanes();
-	const target = canonicalPath(cwd);
-	let workspaceId = callerWorkspace;
-	let matchLength = -1;
-	for (const workspace of workspaces) {
-		if (!isString(workspace?.workspace_id))
-			throw new Error("Unexpected herdr workspace identity");
-		// Herdr exposes checkout ownership, but no stable non-Git workspace root.
-		// A shell's incidental cwd is not a workspace association.
-		const checkout = workspace.worktree?.checkout_path;
-		if (!isString(checkout)) continue;
-		const canonical = canonicalPath(checkout);
-		if (
-			containsCwd(canonical, target) &&
-			(canonical.length > matchLength ||
-				(canonical.length === matchLength &&
-					workspace.workspace_id === callerWorkspace))
-		) {
-			workspaceId = workspace.workspace_id;
-			matchLength = canonical.length;
-		}
-	}
-
-	// The entire inspect/create/record window is synchronous, before launch's
-	// first await. Overlapping launches in this parent cannot overbook a tab.
-	let paneId: string | undefined;
-	for (const [tabId, owned] of agentsTabs) {
-		if (owned.workspaceId !== workspaceId) continue;
-		const live = panes.filter(
-			(pane) => pane.tab_id === tabId && pane.workspace_id === workspaceId,
-		);
-		if (live.length === 0) {
-			agentsTabs.delete(tabId);
-			continue;
-		}
-		if (live.length >= maxPerTab) continue;
-		// The tab ID remains ours even when only user-added panes survive.
-		const anchor =
-			live.find((pane) => owned.panes.has(pane.pane_id)) ?? live[0];
-		paneId = extractHerdrPaneId(
-			herdrExec(buildPaneSplitArgs(anchor.pane_id, direction, cwd)),
-			"pane split",
-		);
-		owned.panes.add(paneId);
-		break;
-	}
-	if (!paneId) {
-		const count = [...agentsTabs.values()].filter(
-			(tab) => tab.workspaceId === workspaceId,
-		).length;
-		const label = count === 0 ? "Agents" : `Agents ${count + 1}`;
-		const output = herdrExec(buildTabCreateArgs(label, cwd, workspaceId));
-		paneId = extractHerdrRootPaneId(output, "tab create");
-		const tabId = parseHerdrJson(output)?.result?.tab?.tab_id;
-		if (!isString(tabId) || !tabId) {
-			// Only the explicitly returned pane is ours to roll back.
-			try {
-				herdrExec(["pane", "close", paneId]);
-			} catch {
-				/* preserve parse error */
-			}
-			throw new Error("Unexpected herdr tab create identity");
-		}
-		agentsTabs.set(tabId, { workspaceId, panes: new Set([paneId]) });
-	}
-	try {
-		herdrExec(["pane", "rename", paneId, name]);
-	} catch {
-		/* cosmetic */
-	}
-	return paneId;
+	return placeSurface({
+		family: "agents",
+		name,
+		cwd,
+		maxPerTab,
+		direction,
+	}).paneId;
 }
 
 /** Worktree records returned by `herdr worktree list`. */
@@ -527,17 +368,11 @@ function retainWorktreeTab(
 	const tabId =
 		isString(returnedTabId) && returnedTabId
 			? returnedTabId
-			: placementPanes().find(
-					(pane) =>
-						pane.pane_id === worktree.paneId &&
-						pane.workspace_id === worktree.workspaceId,
+			: listWorkspacePanes(worktree.workspaceId).find(
+					(pane) => pane.pane_id === worktree.paneId,
 				)?.tab_id;
 	if (tabId) {
-		agentsTabs.set(tabId, {
-			workspaceId: worktree.workspaceId,
-			panes: new Set([worktree.paneId]),
-			retainedPaneId: worktree.paneId,
-		});
+		retainedPaneIds.add(worktree.paneId);
 		try {
 			herdrExec(["tab", "rename", tabId, "Agents"]);
 		} catch {
@@ -912,15 +747,7 @@ export function createHerdrSurfaceSplit(
 	direction: "right" | "down",
 	cwd = process.cwd(),
 ): string {
-	const parentPaneId = getHerdrParentPaneId();
-	const output = herdrExec(buildPaneSplitArgs(parentPaneId, direction, cwd));
-	const paneId = extractHerdrPaneId(output, "pane split");
-	try {
-		herdrExec(["pane", "rename", paneId, name]);
-	} catch {
-		// Optional.
-	}
-	return paneId;
+	return placeSplitSurface({ name, direction, cwd });
 }
 
 export function readHerdrScreen(surface: string, lines = 50): string {
@@ -1292,14 +1119,11 @@ export function sendHerdrEscape(surface: string): void {
 }
 
 export function closeHerdrSurface(surface: string): void {
-	for (const owned of agentsTabs.values()) {
-		if (owned.retainedPaneId === surface) return;
-	}
+	// Worktree root panes are retained in success, failure, and help-request.
+	if (retainedPaneIds.has(surface)) return;
 	// Herdr removes a tab when its last pane closes. Never close a whole tab:
 	// a user may have added a pane since our last snapshot.
 	herdrExec(["pane", "close", surface]);
-	// Keep tab ownership until placement observes that the tab is actually gone.
-	for (const owned of agentsTabs.values()) owned.panes.delete(surface);
 }
 
 export function renameHerdrTab(title: string): void {
@@ -1322,19 +1146,15 @@ async function withMockHerdrExec<T>(
 ): Promise<T> {
 	const previous = herdrExecForTest;
 	herdrExecForTest = mock;
-	agentsTabs.clear();
 	try {
 		return await run();
 	} finally {
 		herdrExecForTest = previous;
-		agentsTabs.clear();
 	}
 }
 
 export const __herdrTest__ = {
 	buildCurrentPaneArgs,
-	buildTabCreateArgs,
-	buildPaneSplitArgs,
 	buildWorktreeCreateArgs,
 	buildWorktreeRemoveArgs,
 	parseHerdrJson,

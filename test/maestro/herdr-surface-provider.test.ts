@@ -52,6 +52,8 @@ describe("HerdrSurfaceProvider", () => {
 
 	it("creates grouped surfaces by using the configured cap and split direction", async () => {
 		const calls: string[][] = [];
+		const tabs: JsonObject[] = [];
+		const livePanes: JsonObject[] = [];
 		await __herdrTest__.withMockHerdrExec(
 			(args) => {
 				calls.push(args);
@@ -76,21 +78,36 @@ describe("HerdrSurfaceProvider", () => {
 					});
 				}
 				if (args[0] === "pane" && args[1] === "list") {
-					return paneList({
+					return paneList(...livePanes);
+				}
+				if (args[0] === "tab" && args[1] === "list") {
+					return json({ type: "tab_list", tabs });
+				}
+				if (args[0] === "tab" && args[1] === "create") {
+					tabs.push({
+						tab_id: "agents-tab",
+						workspace_id: "workspace-1",
+						label: "Agents",
+						number: 1,
+						pane_count: 1,
+					});
+					livePanes.push({
 						pane_id: "pane-1",
 						tab_id: "agents-tab",
 						workspace_id: "workspace-1",
-						cwd: "/repo",
-						label: "first",
 					});
-				}
-				if (args[0] === "tab" && args[1] === "create") {
 					return json({
 						tab: { tab_id: "agents-tab" },
 						root_pane: { pane_id: "pane-1" },
 					});
 				}
 				if (args[0] === "pane" && args[1] === "split") {
+					const anchor = livePanes.find((pane) => pane.pane_id === args[2]);
+					livePanes.push({
+						pane_id: "pane-2",
+						tab_id: anchor?.tab_id,
+						workspace_id: "workspace-1",
+					});
 					return json({ pane: { pane_id: "pane-2" } });
 				}
 				return json({ ok: true });
@@ -605,6 +622,47 @@ describe("HerdrSurfaceProvider", () => {
 			["workspace", "rename", "workspace-current", "Workspace Title"],
 			["worktree", "remove", "--workspace", "workspace-dead"],
 		]);
+	});
+
+	it("keeps a retained worktree pane open but closes an ordinary pane", async () => {
+		const calls: string[][] = [];
+		await __herdrTest__.withMockHerdrExec(
+			(args) => {
+				calls.push(args);
+				if (args[0] === "worktree" && args[1] === "list") {
+					return json({ type: "worktree_list", worktrees: [] });
+				}
+				if (args[0] === "worktree" && args[1] === "create") {
+					return json({
+						type: "worktree_created",
+						workspace: { workspace_id: "retained-workspace" },
+						root_pane: { pane_id: "retained-worktree-pane" },
+						tab: { tab_id: "retained-tab" },
+						worktree: {
+							path: "/repo-retained/branch",
+							branch: "retained",
+						},
+					});
+				}
+				return json({ ok: true });
+			},
+			async () => {
+				const provider = new HerdrSurfaceProvider({ paneConfig });
+				provider.createWorktreeSurface({
+					name: "retained",
+					cwd: "/repo-retained",
+					branch: "retained",
+					base: "HEAD",
+				});
+				provider.closeSurface("retained-worktree-pane");
+				provider.closeSurface("ordinary-pane");
+			},
+		);
+
+		assert.deepEqual(
+			calls.filter((args) => args[0] === "pane" && args[1] === "close"),
+			[["pane", "close", "ordinary-pane"]],
+		);
 	});
 
 	it("attached handles delegate commands, reads, raw keys, Escape, and close", async () => {

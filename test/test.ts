@@ -11824,39 +11824,6 @@ describe("herdr.ts", () => {
 			]);
 		});
 
-		it("targets an explicit stable parent when splitting without focus", () => {
-			assert.deepEqual(
-				__herdrTest__.buildPaneSplitArgs("parent-pane", "down", "/repo"),
-				[
-					"pane",
-					"split",
-					"parent-pane",
-					"--direction",
-					"down",
-					"--no-focus",
-					"--cwd",
-					"/repo",
-				],
-			);
-		});
-
-		it("targets the current workspace when creating a subagent tab", () => {
-			assert.deepEqual(
-				__herdrTest__.buildTabCreateArgs("reviewer", "/repo", "workspace-2"),
-				[
-					"tab",
-					"create",
-					"--workspace",
-					"workspace-2",
-					"--label",
-					"reviewer",
-					"--cwd",
-					"/repo",
-					"--no-focus",
-				],
-			);
-		});
-
 		it("creates a background worktree from an exact base commit", () => {
 			assert.deepEqual(
 				__herdrTest__.buildWorktreeCreateArgs(
