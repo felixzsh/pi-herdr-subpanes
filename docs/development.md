@@ -89,13 +89,14 @@ before any test runs. Register the resolver hook instead of linking
 `node_modules` into the checkout:
 
 ```bash
-node --experimental-strip-types \
-  --import "$(git rev-parse --show-toplevel)/tools/worktree-resolve.mjs" \
-  --test test/maestro/example.test.ts
+NODE_OPTIONS="--import=$(git rev-parse --show-toplevel)/tools/worktree-resolve.mjs" \
+  node --experimental-strip-types --test test/maestro/example.test.ts
 ```
 
-The hook falls back to the main checkout's `node_modules`, located through the
-shared Git common directory. It writes nothing into the worktree, so the tree
+The hook retries a bare specifier from the main checkout, located through the
+shared Git common directory. Pass it through `NODE_OPTIONS` rather than
+`--import`: `node --test` runs each file in a child process, and only
+`NODE_OPTIONS` reaches those children. It writes nothing into the worktree, so the tree
 stays clean for review. Worktrees still never run the full suite; the parent
 runs the gate in the main checkout.
 

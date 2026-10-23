@@ -115,9 +115,12 @@ Focused tests may run inside a worktree only through
 without linking or writing anything into the checkout:
 
 ```bash
-node --experimental-strip-types \
-  --import "$PWD/tools/worktree-resolve.mjs" --test test/maestro/example.test.ts
+NODE_OPTIONS="--import=$PWD/tools/worktree-resolve.mjs" \
+  node --experimental-strip-types --test test/maestro/example.test.ts
 ```
+
+`NODE_OPTIONS` and not `--import`: `node --test` runs each file in a child
+process, and only `NODE_OPTIONS` reaches those children.
 
 The full suite still runs only in the main repository.
 
