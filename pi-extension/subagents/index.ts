@@ -2083,7 +2083,11 @@ function resolveSubagentRuntimePlans(
 }
 
 function launchSnapshot(
-	ctx: Parameters<typeof normalizePiAttempt>[1],
+	// Only the trust decision is optional: a host that does not expose it never
+	// claims the parent is trusted.
+	ctx: Parameters<typeof normalizePiAttempt>[1] & {
+		isProjectTrusted?: () => boolean;
+	},
 	thinking?: ThinkingLevel,
 ): PiLaunchSnapshot {
 	return {
@@ -2094,6 +2098,7 @@ function launchSnapshot(
 			sessionId: ctx.sessionManager.getSessionId(),
 			sessionDir: ctx.sessionManager.getSessionDir(),
 			agentDir: getAgentConfigDir(),
+			projectTrusted: ctx.isProjectTrusted?.() === true,
 		},
 		parentRuntime:
 			ctx.model && thinking
@@ -3345,6 +3350,7 @@ export default function subagentsExtension(
 							sessionId: ctx.sessionManager.getSessionId(),
 							sessionDir: ctx.sessionManager.getSessionDir(),
 							agentDir: getAgentConfigDir(),
+							projectTrusted: ctx.isProjectTrusted?.() === true,
 						},
 						paneConfig,
 						modelRegistry: wrapPiModelRegistry(ctx.modelRegistry),

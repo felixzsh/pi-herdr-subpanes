@@ -648,6 +648,70 @@ describe("Pi launch", () => {
 		});
 	});
 
+	it("passes --approve only when the parent session is project-trusted", async () => {
+		await withFixture(async ({ request, root, project, sessionDir }) => {
+			const commands: string[] = [];
+			let paneCounter = 0;
+			const operations = (): PiLaunchOperations => ({
+				worktree: createWorktreeOperations(),
+				createPane() {
+					paneCounter += 1;
+					return `pane-trust-${paneCounter}`;
+				},
+				createWorktree() {
+					throw new Error("unexpected worktree creation");
+				},
+				async waitForShellReady() {},
+				runScript(_surface, value, options) {
+					commands.push(value);
+					return options.scriptPath;
+				},
+				closePane() {},
+			});
+
+			await launchPiSubagent(
+				{
+					...request,
+					id: "trusted-child",
+					parent: { ...request.parent, projectTrusted: true },
+				},
+				operations(),
+			);
+			await launchPiSubagent(
+				{
+					...request,
+					id: "untrusted-child",
+					parent: { ...request.parent, projectTrusted: false },
+				},
+				operations(),
+			);
+
+			// A trusted parent delegates its decision; an untrusted one never widens it.
+			assert.match(commands[0], /--thinking 'high' --approve /);
+			assert.doesNotMatch(commands[1], /--approve/);
+
+			const sessionFile = join(root, "trusted-resume.jsonl");
+			writeFileSync(
+				sessionFile,
+				JSON.stringify({ type: "session", id: "child", cwd: project }) + "\n",
+			);
+			writePublicResumePolicy(sessionFile);
+			const resume: ResumePiLaunchRequest = {
+				kind: "resume",
+				id: "trusted-resume",
+				name: "Trusted resume",
+				sessionFile,
+				parent: { sessionId: "parent", sessionDir, projectTrusted: true },
+			};
+			await launchPiSubagent(resume, operations());
+			assert.match(
+				commands[2],
+				/--session '[^']+' --approve --tools /,
+				"a trusted resume must not block on the trust prompt",
+			);
+		});
+	});
+
 	it("treats an explicit null worktree as an ordinary pane", async () => {
 		await withFixture(async ({ request, project }) => {
 			let worktreeCreationAttempts = 0;

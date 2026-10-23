@@ -111,6 +111,8 @@ export interface PiLaunchSnapshot {
 		sessionId: string;
 		sessionDir: string;
 		agentDir?: string;
+		/** The parent runs trusted, so a child inherits the decision for its run. */
+		projectTrusted?: boolean;
 	};
 	parentRuntime?: ParentRuntime;
 	modelRegistry: ModelRegistryAdapter;

@@ -27,6 +27,8 @@ Subagent tabs, panes, and worktree workspaces are created without stealing keybo
 
 The widget shows `stalled` when pane inspection fails or the pane disappears without a completion record. Time alone never makes a run stalled. A no-progress advisory warns once per episode and never interrupts, kills, retries, or restarts a child. Interrupt the child with `subagent_interrupt`, end an ordinary run with `subagent_cancel`, or stop a persistent specialist with `subagent_stop`. See [In-progress status updates](tools.md#in-progress-status-updates) and [Supervision transport](configuration.md#supervision-transport).
 
+If a child sits on a `Trust project folder?` prompt, the pane is waiting for an answer nobody can give. A child inherits the parent session's project-trust decision for its own run, so this only happens when the parent itself is untrusted: trust the source repository in the parent, or launch the child with `cwd` inside a trusted path. A managed worktree needs no separate trust entry.
+
 ## A model fails
 
 A catalog-listed model and configured authentication do not prove that your provider account can use the model. The completion keeps each raw provider reason with its model. Check account access, launch a new subagent with a supported model, or configure a fallback. See [Model resolution and fallback](configuration.md#model-resolution-and-fallback).

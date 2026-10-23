@@ -61,6 +61,12 @@ export interface FreshPiLaunchRequest {
 		sessionId: string;
 		sessionDir: string;
 		agentDir?: string;
+		/**
+		 * The parent session runs with project-local resources trusted, so a child
+		 * inherits that decision for its own run instead of blocking on a trust
+		 * prompt nobody can answer in an unattended pane.
+		 */
+		projectTrusted?: boolean;
 	};
 	runtimePlan: ResolvedRuntimePlan;
 	behavior: {
@@ -89,6 +95,7 @@ export interface ResumePiLaunchRequest {
 	parent: {
 		sessionId: string;
 		sessionDir: string;
+		projectTrusted?: boolean;
 	};
 	behavior?: {
 		autoExit?: boolean;
@@ -847,6 +854,7 @@ function buildPiCommand(
 		shellQuote(request.runtimePlan.model),
 		"--thinking",
 		shellQuote(request.runtimePlan.thinking),
+		...(request.parent.projectTrusted ? ["--approve"] : []),
 	];
 	if (artifacts.systemPromptFile) {
 		parts.push(
@@ -1075,6 +1083,7 @@ async function launchResumedPiSubagent(
 			"pi",
 			"--session",
 			shellQuote(request.sessionFile),
+			...(request.parent.projectTrusted ? ["--approve"] : []),
 			...(toolAllowlist ? ["--tools", shellQuote(toolAllowlist)] : []),
 			"-e",
 			shellQuote(join(SUBAGENTS_DIR, "child", "subagent-done.ts")),
