@@ -6,7 +6,7 @@ These instructions apply to humans and coding agents changing `pi-herdr-subpanes
 
 `pi-herdr-subpanes` (Pi Herdr Subpanes) is a Pi extension that launches asynchronous Pi child agents exclusively in Herdr. Ordinary runs group child panes in extension-owned `Agents` tabs by default. It also runs `bg_shell` jobs in a sibling `shells` tab family with the same pane policy. Writing tasks may opt into one isolated Herdr-managed Git worktree per branch. Legacy role definitions that request an external CLI fail before Herdr creates resources.
 
-The package is a pack-neutral execution host: it ships no agent roles and no planning or review workflows. Its only skill is `pi-herdr-subpanes`, a general operating guide for the host; do not add methodology or workflow skills here. Roles come from project or global definitions and separately installed role packs. Do not add bundled roles, a privileged default pack, or name-keyed workflow behavior; see [ADR-0013](docs/adr/0013-pack-neutral-execution-host.md).
+The package is a pack-neutral execution host: it ships no agent roles and no planning or review workflows. Its skills are `pi-herdr-subpanes` (subagent delegation and supervision) and `pi-herdr-shells` (background shell jobs), operating guides for the host; do not add methodology or workflow skills here. Roles come from project or global definitions and separately installed role packs. Do not add bundled roles, a privileged default pack, or name-keyed workflow behavior; see [ADR-0013](docs/adr/0013-pack-neutral-execution-host.md).
 
 The extension is fire-and-forget: `subagent` returns an acknowledgement, and completion is delivered to the parent automatically. Never add polling guidance that tells callers to sleep, tail sessions, or repeatedly check status.
 
@@ -78,7 +78,7 @@ Read [`docs/worktree-subagents.md`](docs/worktree-subagents.md) before changing 
 When behavior changes, update every affected surface in the same commit:
 
 - public tool parameters or lifecycle → `docs/tools.md`, plus the `README.md` summary when everyday use changes
-- shell job states, ownership/adoption, or delivery → `docs/tools.md`, `docs/configuration.md`, and `skills/pi-herdr-subpanes/SKILL.md`
+- shell job states, ownership/adoption, or delivery → `docs/tools.md`, `docs/configuration.md`, and `skills/pi-herdr-shells/SKILL.md` (plus a pointer line in `skills/pi-herdr-subpanes/SKILL.md` when the entry point changes)
 - shell job state root, retention, or `PI_SHELLS_DIR` → `docs/configuration.md`
 - surface placement families, label adoption, or `panes.maxPerTab`/`panes.direction` scope → `docs/configuration.md` and `CONTEXT.md`
 - configuration keys or model routing → `docs/configuration.md`, plus the `README.md` summary when everyday use changes
@@ -146,7 +146,7 @@ Use `PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 npm run te
 Before committing:
 
 - inspect `git status` and the final diff;
-- confirm the package preview includes `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/herdr-subpanes/index.ts`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-subpanes/SKILL.md`, and no `pi-extension/herdr-subpanes/plan-skill.md`, and excludes `pi-extension/herdr-subpanes/workflow-worker.js`, plans, journals, sessions, shell job state, prototypes, generated evidence, local config, and `openspec/`;
+- confirm the package preview includes `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/herdr-subpanes/index.ts`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-subpanes/SKILL.md` and `skills/pi-herdr-shells/SKILL.md`, and no `pi-extension/herdr-subpanes/plan-skill.md`, and excludes `pi-extension/herdr-subpanes/workflow-worker.js`, plans, journals, sessions, shell job state, prototypes, generated evidence, local config, and `openspec/`;
 - run `npm pack --dry-run` when package contents or documentation paths changed; durable configuration is `$PI_CODING_AGENT_DIR/herdr-subpanes/config.json`, never package-root `config.json` (move old files manually);
 - confirm that no generated plans, journals, sessions, provider configuration, test scripts, or review artifacts are staged; and
 - confirm that no accidental empty directory exists at the repository root:

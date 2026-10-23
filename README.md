@@ -10,7 +10,7 @@ Asynchronous subagents for [Pi](https://github.com/earendil-works/pi), running e
 
 Delegate investigation, implementation, and review without blocking the parent session. Each child runs as a real Pi process in its own Herdr pane. Its result comes back to the parent automatically when it finishes.
 
-> **Agents:** load the operating guide with `/skill:pi-herdr-subpanes`. It covers launching, supervising, interrupting, cancelling, and resuming children, worktrees, persistent specialists, model routing, and configuration. The source is [`skills/pi-herdr-subpanes/SKILL.md`](skills/pi-herdr-subpanes/SKILL.md). Contributors: read [`AGENTS.md`](AGENTS.md).
+> **Agents:** load the subagent operating guide with `/skill:pi-herdr-subpanes`. It covers launching, supervising, interrupting, cancelling, and resuming children, worktrees, persistent specialists, model routing, and configuration. The source is [`skills/pi-herdr-subpanes/SKILL.md`](skills/pi-herdr-subpanes/SKILL.md). For background shell jobs, load `/skill:pi-herdr-shells` ([source](skills/pi-herdr-shells/SKILL.md)). Contributors: read [`AGENTS.md`](AGENTS.md).
 
 ## Contents
 
@@ -146,9 +146,10 @@ Children get `caller_ping` to ask the parent for help. Interactive children also
 | --- | --- |
 | `/subagent <agent> <task>` | Launch a named role. `/subagent list` lists roles. |
 | `/worktree <name> [task]` | Continue this conversation in a new managed worktree. `/worktree list` and `/worktree remove <target>` manage them. |
-| `/skill:pi-herdr-subpanes` | Load the host operating guide. |
+| `/skill:pi-herdr-subpanes` | Load the subagent operating guide. |
+| `/skill:pi-herdr-shells` | Load the background shell job guide. |
 
-The main `subagent` parameters are `name`, `task`, `agent`, `model`, `thinking`, `fork`, `cwd`, `persistent`, `interactive`, and `worktree`. See [Parameters](docs/tools.md#parameters) for every parameter, and [Tools and lifecycle reference](docs/tools.md) for the full behavior of each tool. Live tool descriptions and these documents are authoritative. The `pi-herdr-subpanes` skill is a general operating guide.
+The main `subagent` parameters are `name`, `task`, `agent`, `model`, `thinking`, `fork`, `cwd`, `persistent`, `interactive`, and `worktree`. See [Parameters](docs/tools.md#parameters) for every parameter, and [Tools and lifecycle reference](docs/tools.md) for the full behavior of each tool. Live tool descriptions and these documents are authoritative. The `pi-herdr-subpanes` skill is the subagent operating guide; `pi-herdr-shells` covers background shell jobs.
 
 ## Choose models
 

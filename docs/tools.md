@@ -24,7 +24,8 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 
 | Skill | Description |
 | ----- | ----------- |
-| `pi-herdr-subpanes` | Operating guide for this host: launching, supervising, interrupting, cancelling and resuming children, worktrees, persistent specialists, model routing and configuration. Loaded by agents on demand; see the [operating skill](../skills/pi-herdr-subpanes/SKILL.md) |
+| `pi-herdr-subpanes` | Operating guide for subagent delegation: launching, supervising, interrupting, cancelling and resuming children, worktrees, persistent specialists, model routing and configuration. Loaded by agents on demand; see the [operating skill](../skills/pi-herdr-subpanes/SKILL.md) |
+| `pi-herdr-shells` | Operating guide for background shell jobs: running, inspecting, reading logs of, and cancelling jobs. Loaded by agents on demand; see the [operating skill](../skills/pi-herdr-shells/SKILL.md) |
 
 | Pi child-only tool | Description |
 | ---------------- | ------------------------------------------------------------------------- |

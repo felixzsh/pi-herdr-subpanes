@@ -24,8 +24,9 @@ skills, not to this package. See
 ## Roles and role packs
 
 This package is a pack-neutral execution host: it ships no agent roles, no
-`/plan` command, and no planning or review skills. Its one skill,
-`pi-herdr-subpanes`, is a general operating guide for the host. A named launch resolves
+`/plan` command, and no planning or review skills. Its skills,
+`pi-herdr-subpanes` (subagents) and `pi-herdr-shells` (background shell jobs),
+are operating guides for the host. A named launch resolves
 `agent` from project definitions, global definitions, and roles registered by
 installed role packs, in that precedence order (see below). An empty catalog is
 valid. A bare launch without `agent` always works. An explicitly named role that

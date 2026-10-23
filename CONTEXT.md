@@ -109,7 +109,8 @@ _Avoid_: Silent Pi reinterpretation, compatibility adapter
 
 **Pack-neutral host**:
 This package as an execution host that ships no agent roles and no planning or
-review workflows. Its only skill, `pi-herdr-subpanes`, is a general operating guide for its own
+review workflows. Its skills, `pi-herdr-subpanes` (subagents) and `pi-herdr-shells`
+(background shell jobs), are operating guides for its own
 control tools. Role packs and project or global definitions supply every
 named role. An empty catalog is valid, and bare launches need no role.
 _Avoid_: Default role set, privileged pack, starter workflow

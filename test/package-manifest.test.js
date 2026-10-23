@@ -46,7 +46,7 @@ const ordinaryReviewClauses = [
 ];
 // Host-owned operational skills are the only shipped skills; workflow skills
 // such as orchestrate and plan belong to role packs.
-const hostSkills = ["pi-herdr-subpanes"];
+const hostSkills = ["pi-herdr-subpanes", "pi-herdr-shells"];
 const hostSkillFiles = new Set(hostSkills.map((n) => `skills/${n}/SKILL.md`));
 const packageFiles = new Set(
 	JSON.parse(
@@ -227,14 +227,14 @@ describe("pack-neutral package contents", () => {
 	});
 
 	it("keeps shell job documentation aligned with the registered tools", () => {
-		const skill = readDoc("skills/pi-herdr-subpanes/SKILL.md");
+		const skill = readDoc("skills/pi-herdr-shells/SKILL.md");
 		for (const name of ["bg_shell", "bg_shell_status"])
 			for (const [label, content] of [
 				["README", readme],
 				["docs/tools.md", toolsDoc],
 				["docs/configuration.md", configurationDoc],
-				["skills/pi-herdr-subpanes/SKILL.md", skill],
-			])
+				["skills/pi-herdr-shells/SKILL.md", skill],
+				])
 				assert.ok(
 					normalized(content).includes(name),
 					`${label} must document ${name}`,
