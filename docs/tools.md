@@ -87,6 +87,15 @@ When `activeCount === 0` (every tracked row is open), the border uses an amber a
 
 A fixed internal watchdog marks a run as `stalled` when pane inspection fails or the pane disappears without a completion sidecar; valid long-running `active` or `waiting` states do not become `stalled` just because time passes. When a run enters `stalled` or recovers from it, the parent agent receives a steer message so it can react. All other status transitions stay in the widget only.
 
+**A child that does not exit still reports its result.** An autonomous child
+with `auto-exit: false` keeps its session open after finishing, so it cannot
+report through the exit sidecar. When such a child ends a turn
+(`stopReason: "stop"`) that same reading is confirmed on two consecutive
+reconciliations and delivered as the result, so a role that forgets to call
+`subagent_done` no longer hangs until cancelled. A turn that ends mid-tool-use
+never counts, and persistent specialists and `interactive` children are never
+settled this way because they wait for another task or for the operator.
+
 **Interactive subagents stay silent.** Long-running user-driven subagents (for example, an interactive planning role or a bare `interactive: true` fork) do not wake the parent session on `stalled`/`recovered` transitions — the user is working directly in the subagent's pane, and a steer message there would just burn an orchestrator turn on a no-op "still waiting" ping. The widget still updates normally, and activity snapshots are still recorded/classified regardless of the `interactive` setting. By default, agents with `auto-exit: true` are treated as autonomous and get stall pings; agents without it are treated as interactive and stay quiet. Override per-agent with `interactive: true|false` in frontmatter, or per-spawn with `interactive: true|false` on the tool call.
 
 ## Spawning Subagents

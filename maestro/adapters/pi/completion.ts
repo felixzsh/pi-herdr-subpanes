@@ -28,6 +28,12 @@ export interface CompletionOptions {
 	waitForNextCheck?: (signal: AbortSignal) => Promise<"wake" | "reconcile">;
 	/** Drain local task evidence before any terminal fallback. */
 	onLocalEvidence?: () => void;
+	/**
+	 * Evidence that a child which does not exit on its own ended a turn and is
+	 * idle. Confirmed on consecutive reconciliations before it settles, so a child
+	 * that stops between tool batches is never mistaken for a finished one.
+	 */
+	readIdleTurn?: () => CompletionResult | null;
 }
 
 export function interpretExitSidecar(payload: any): CompletionResult {
@@ -132,6 +138,10 @@ export async function waitForCompletion(
 	options: CompletionOptions,
 ): Promise<CompletionResult> {
 	const startedAt = Date.now();
+	// A child that does not exit on its own settles only after the same idle
+	// signal twice, so a pause between tool batches never looks like completion.
+	const IDLE_TURN_CONFIRMATIONS = 2;
+	let idleTurnConfirmations = 0;
 
 	// Coordinated supervision waits for its first shared epoch; legacy callers
 	// retain the immediate terminal probe.
@@ -190,6 +200,13 @@ export async function waitForCompletion(
 						"Subagent pane disappeared before completion evidence was recorded.",
 				};
 			}
+		}
+
+		if (reconcile && options.readIdleTurn) {
+			const idleTurn = options.readIdleTurn();
+			idleTurnConfirmations = idleTurn ? idleTurnConfirmations + 1 : 0;
+			if (idleTurn && idleTurnConfirmations >= IDLE_TURN_CONFIRMATIONS)
+				return idleTurn;
 		}
 
 		options.onTick?.(Math.floor((Date.now() - startedAt) / 1000));

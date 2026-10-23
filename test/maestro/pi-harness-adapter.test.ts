@@ -312,6 +312,65 @@ describe("PiHarnessAdapter", () => {
 			);
 			assert.equal(f.surface.listSurfaces().length, 1);
 		}));
+	it("settles a child that ends a turn and stays open", async () =>
+		usingFixture(async (f) => {
+			const child = await f.adapter.spawn({
+				...f.options,
+				role: {
+					...f.options.role!,
+					defaults: { autoExit: false, spawning: false, interactive: false },
+				},
+			});
+			writeFileSync(
+				child.sessionId,
+				JSON.stringify({
+					type: "message",
+					message: {
+						role: "assistant",
+						content: [{ type: "text", text: "verdict: APPROVE" }],
+						stopReason: "stop",
+					},
+				}) + "\n",
+			);
+			const evidence = await f.adapter.awaitCompletion(
+				child,
+				new AbortController().signal,
+			);
+			assert.equal(evidence.reason, "done");
+			assert.equal(evidence.exitCode, 0);
+			assert.equal(evidence.finalMessage?.text, "verdict: APPROVE");
+		}));
+
+	it("does not settle a child that is still calling tools", async () =>
+		usingFixture(async (f) => {
+			const child = await f.adapter.spawn({
+				...f.options,
+				role: {
+					...f.options.role!,
+					defaults: { autoExit: false, spawning: false, interactive: false },
+				},
+			});
+			writeFileSync(
+				child.sessionId,
+				JSON.stringify({
+					type: "message",
+					message: {
+						role: "assistant",
+						content: [{ type: "tool_use", name: "read" }],
+						stopReason: "toolUse",
+					},
+				}) + "\n",
+			);
+			const controller = new AbortController();
+			const waiting = f.adapter.awaitCompletion(child, controller.signal);
+			await new Promise((resolve) => setTimeout(resolve, 60));
+			controller.abort();
+			await assert.rejects(
+				waiting,
+				/Aborted while waiting for subagent to finish/,
+			);
+		}));
+
 	it("keeps legacy fallback IDs opaque without reusing prior session evidence", async () =>
 		usingFixture(async (f) => {
 			const launchIdentity = { id: "legacy-fallback-id" };

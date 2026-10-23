@@ -27,6 +27,12 @@ Subagent tabs, panes, and worktree workspaces are created without stealing keybo
 
 The widget shows `stalled` when pane inspection fails or the pane disappears without a completion record. Time alone never makes a run stalled. A no-progress advisory warns once per episode and never interrupts, kills, retries, or restarts a child. Interrupt the child with `subagent_interrupt`, end an ordinary run with `subagent_cancel`, or stop a persistent specialist with `subagent_stop`. See [In-progress status updates](tools.md#in-progress-status-updates) and [Supervision transport](configuration.md#supervision-transport).
 
+A child that keeps its session open after a turn (`auto-exit: false`) reports
+its result when the turn ends, so it does not need `subagent_done`. If it stays
+running with no result at all, check whether the last message ended mid-tool-use
+or whether the child is `interactive` or persistent: those cases deliberately
+wait instead of settling.
+
 If a child sits on a `Trust project folder?` prompt, the pane is waiting for an answer nobody can give. A child inherits the parent session's project-trust decision for its own run, so this only happens when the parent itself is untrusted: trust the source repository in the parent, or launch the child with `cwd` inside a trusted path. A managed worktree needs no separate trust entry.
 
 ## A shell job stays `running`

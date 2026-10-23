@@ -51,7 +51,7 @@ import {
 	type PiRunningChild,
 } from "./launch.ts";
 import type { WorktreeOperations } from "../../core/worktree.ts";
-import { waitForCompletion } from "./completion.ts";
+import { waitForCompletion, type CompletionResult } from "./completion.ts";
 import {
 	appendPersistentDeliveryLedger,
 	findObservedSessionRuntime,
@@ -544,6 +544,13 @@ export class PiHarnessAdapter implements HarnessAdapter {
 					readTerminalTail: async () =>
 						this.options.surface.readScreen(child.surface, 5),
 					inspectPane: registration.inspectPane,
+					// Only an autonomous child that keeps its session open after a turn
+					// reports its result this way. A persistent specialist waits for
+					// another task and an interactive child waits for the operator.
+					readIdleTurn:
+						!child.autoExit && !child.persistent && !child.interactive
+							? () => this.readIdleTurn(child)
+							: undefined,
 					onLocalEvidence: () =>
 						this.options.onObservation?.(child, "local-evidence"),
 					onPaneInspection: (pane, at) => {
@@ -596,6 +603,25 @@ export class PiHarnessAdapter implements HarnessAdapter {
 		}
 		return this.joinWait(wait, signal);
 	}
+	/**
+	 * A child that does not exit on its own reports its result by ending a turn
+	 * and waiting for input. Only a finished turn (`stopReason: "stop"`) counts;
+	 * `toolUse` means it is still working, and the failure reasons are handled by
+	 * the paths that already read them.
+	 */
+	private readIdleTurn(child: PiRunningChild): CompletionResult | null {
+		if (!existsSync(child.sessionFile)) return null;
+		let entries: ReturnType<typeof getNewEntries>;
+		try {
+			entries = getNewEntries(child.sessionFile, 0);
+		} catch {
+			return null;
+		}
+		const final = inspectFinalAssistantMessage(entries);
+		if (final.stopReason !== "stop" || final.text == null) return null;
+		return { reason: "done", exitCode: 0 };
+	}
+
 	private worktreeOperations(): WorktreeOperations {
 		const operations = this.operations.worktree;
 		if (!operations) throw new Error("Worktree operations are unavailable");

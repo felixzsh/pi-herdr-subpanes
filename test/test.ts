@@ -7602,6 +7602,44 @@ describe("completion.ts", () => {
 		}
 	});
 
+	it("settles an idle turn only after consecutive confirmations", async () => {
+		const states = ["stop", "toolUse", "stop", "stop"];
+		let reconciles = 0;
+		// The first idle reading is followed by a working turn, so it must reset.
+		const result = await waitForCompletion(new AbortController().signal, {
+			intervalMs: 1,
+			readTerminalTail: async () => "",
+			readIdleTurn: () => {
+				const state = states[Math.min(reconciles, states.length - 1)];
+				reconciles += 1;
+				return state === "stop" ? { reason: "done", exitCode: 0 } : null;
+			},
+		});
+		assert.deepEqual(result, { reason: "done", exitCode: 0 });
+		assert.equal(reconciles, 4, "two idle readings must follow the reset");
+	});
+
+	it("ignores an idle turn that never repeats", async () => {
+		let reconciles = 0;
+		const controller = new AbortController();
+		const waiting = waitForCompletion(controller.signal, {
+			intervalMs: 5,
+			readTerminalTail: async () => "",
+			readIdleTurn: () => {
+				reconciles += 1;
+				// Only the first reconcile reports an idle turn.
+				return reconciles === 1 ? { reason: "done", exitCode: 0 } : null;
+			},
+		});
+		await new Promise((resolve) => setTimeout(resolve, 40));
+		controller.abort();
+		await assert.rejects(
+			waiting,
+			/Aborted while waiting for subagent to finish/,
+		);
+		assert.ok(reconciles > 2, "the wait kept reconciling instead of settling");
+	});
+
 	it("returns the terminal sentinel exit code", async () => {
 		const result = await waitForCompletion(new AbortController().signal, {
 			intervalMs: 1,

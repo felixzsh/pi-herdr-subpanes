@@ -116,6 +116,8 @@ export interface PiRunningChild {
 	launchScriptFile: string;
 	activityFile: string;
 	interactive: boolean;
+	/** False when the child keeps its session open after the turn instead of exiting. */
+	autoExit: boolean;
 	runtimePlan: ResolvedRuntimePlan | undefined;
 	worktree?: WorktreeLaunch;
 	lifecycle: SubagentLifecycle;
@@ -968,6 +970,7 @@ function createRunningChild(
 		launchScriptFile,
 		activityFile: artifacts.activityFile,
 		interactive: resolved.request.behavior.interactive,
+		autoExit: resolved.request.behavior.autoExit,
 		runtimePlan: resolved.request.runtimePlan,
 		worktree: artifacts.worktree,
 		lifecycle: createLifecycle(resolved.startTime),
@@ -1119,6 +1122,7 @@ async function launchResumedPiSubagent(
 			launchScriptFile,
 			activityFile,
 			interactive,
+			autoExit,
 			runtimePlan: undefined,
 			lifecycle: createLifecycle(startTime),
 		};
