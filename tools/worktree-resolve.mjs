@@ -22,7 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createRequire, registerHooks } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 function mainCheckoutNodeModules() {
@@ -38,7 +38,7 @@ function mainCheckoutNodeModules() {
 	if (!commonDir) return undefined;
 	// In a worktree the common dir is `<main>/.git`; in the main checkout it is
 	// `.git`, so this candidate resolves to the same directory either way.
-	const root = dirname(join(process.cwd(), commonDir));
+	const root = dirname(resolve(process.cwd(), commonDir));
 	const candidate = join(root, "node_modules");
 	return existsSync(candidate) ? candidate : undefined;
 }
