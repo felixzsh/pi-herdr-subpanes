@@ -65,15 +65,15 @@ describe("production package manifest", () => {
 		assert.equal(manifest.publishConfig?.access, "public");
 		assert.equal(
 			manifest.repository?.url,
-			"git+https://github.com/giuseppecrj/pi-herdr-bg.git",
+			"git+https://github.com/felixzsh/pi-herdr-bg.git",
 		);
 		assert.equal(
 			manifest.bugs?.url,
-			"https://github.com/giuseppecrj/pi-herdr-bg/issues",
+			"https://github.com/felixzsh/pi-herdr-bg/issues",
 		);
 		assert.equal(
 			manifest.homepage,
-			"https://github.com/giuseppecrj/pi-herdr-bg#readme",
+			"https://github.com/felixzsh/pi-herdr-bg#readme",
 		);
 		assert.equal(manifest.author?.name, "Giuseppe Rodriguez");
 		assert.equal(manifest.author?.url, "https://github.com/giuseppecrj");

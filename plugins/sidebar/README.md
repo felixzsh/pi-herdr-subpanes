@@ -1,6 +1,6 @@
 # Pi Herdr Background Sidebar
 
-![Pi Herdr Background: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-bg/main/docs/assets/pi-herdr-bg-gallery.png)
+![Pi Herdr Background: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/felixzsh/pi-herdr-bg/main/docs/assets/pi-herdr-bg-gallery.png)
 
 > **Compatibility.** Sidebar support requires `pi-herdr-bg` version `3.2.0` or later. On macOS it requires a release newer than `3.2.1`.
 
@@ -33,7 +33,7 @@ Setup has two parts. Install the Herdr plugin, then enable markers in a compatib
 Install the plugin from GitHub. Herdr shows the manifest and commands for review:
 
 ```bash
-herdr plugin install giuseppecrj/pi-herdr-bg/plugins/sidebar
+herdr plugin install felixzsh/pi-herdr-bg/plugins/sidebar
 ```
 
 For another published branch, tag, or commit, add `--ref` followed by that revision. The revision must contain the plugin directory.

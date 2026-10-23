@@ -295,7 +295,7 @@ in the Pi extension**. Neither alone enables sidebar filtering.
    `PATH`. Use `pi list` to check package sources; do not load two copies of
    the extension.
 2. Review the plugin source, then follow the guide to install
-   `giuseppecrj/pi-herdr-bg/plugins/sidebar` with `herdr plugin install`,
+   `felixzsh/pi-herdr-bg/plugins/sidebar` with `herdr plugin install`,
    or link an existing compatible directory with `herdr plugin link`.
    Installing the Pi package does not install the Herdr plugin.
 3. Merge `"sidebar": { "enabled": true }` into the durable config described

@@ -1,7 +1,7 @@
 {
   "name": "pi-herdr-bg",
   "version": "3.3.1",
-  "description": "Asynchronous Pi subagents in Herdr, with optional isolated Git worktrees",
+  "description": "Background Pi subagents and shell jobs in Herdr, with optional isolated Git worktrees",
   "keywords": [
     "pi-package",
     "pi",
@@ -18,12 +18,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/giuseppecrj/pi-herdr-bg.git"
+    "url": "git+https://github.com/felixzsh/pi-herdr-bg.git"
   },
   "bugs": {
-    "url": "https://github.com/giuseppecrj/pi-herdr-bg/issues"
+    "url": "https://github.com/felixzsh/pi-herdr-bg/issues"
   },
-  "homepage": "https://github.com/giuseppecrj/pi-herdr-bg#readme",
+  "homepage": "https://github.com/felixzsh/pi-herdr-bg#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -57,7 +57,7 @@
     "skills": [
       "./skills"
     ],
-    "image": "https://raw.githubusercontent.com/giuseppecrj/pi-herdr-bg/main/docs/assets/pi-herdr-bg-gallery.png"
+    "image": "https://raw.githubusercontent.com/felixzsh/pi-herdr-bg/main/docs/assets/pi-herdr-bg-gallery.png"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.11",

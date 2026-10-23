@@ -1,10 +1,10 @@
 # Pi Herdr Background
 
 [![npm version](https://img.shields.io/npm/v/pi-herdr-bg)](https://www.npmjs.com/package/pi-herdr-bg)
-[![CI](https://github.com/giuseppecrj/pi-herdr-bg/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/giuseppecrj/pi-herdr-bg/actions/workflows/ci.yml)
+[![CI](https://github.com/felixzsh/pi-herdr-bg/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/felixzsh/pi-herdr-bg/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![Pi Herdr Background: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-bg/main/docs/assets/pi-herdr-bg-gallery.png)
+![Pi Herdr Background: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/felixzsh/pi-herdr-bg/main/docs/assets/pi-herdr-bg-gallery.png)
 
 Asynchronous subagents for [Pi](https://github.com/earendil-works/pi), running exclusively in [Herdr](https://herdr.dev).
 
@@ -105,7 +105,7 @@ The parent is the coordinator. Give each child one bounded outcome with its goal
 
 ## How it works
 
-![Pi Herdr Background lifecycle: spawn a child, run it in Herdr, supervise live state, and deliver one bounded result to the parent.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-bg/main/docs/assets/async-subagent-lifecycle.png)
+![Pi Herdr Background lifecycle: spawn a child, run it in Herdr, supervise live state, and deliver one bounded result to the parent.](https://raw.githubusercontent.com/felixzsh/pi-herdr-bg/main/docs/assets/async-subagent-lifecycle.png)
 
 A `subagent` call selects the target checkout, reuses its Herdr workspace, and gives the child a pane in an extension-owned `Agents` tab. Four panes fit in each tab by default, and overflow opens another tab in the same workspace. Shell jobs use a separate extension-owned `shells` tab family in the selected checkout workspace. `panes.maxPerTab` and `panes.direction` govern both families, so the same cap and split direction apply to `Agents` and `shells`. The call launches a child Pi session and returns `started`. The parent watches Herdr process state and child activity and shows the result in a live widget:
 
@@ -258,7 +258,7 @@ Setup has two parts. Neither part works alone.
 1. Install the Herdr plugin. Herdr shows the manifest and commands for review:
 
    ```bash
-   herdr plugin install giuseppecrj/pi-herdr-bg/plugins/sidebar
+   herdr plugin install felixzsh/pi-herdr-bg/plugins/sidebar
    ```
 
 2. Open `$PI_CODING_AGENT_DIR/herdr-bg/config.json` (default `~/.pi/agent/herdr-bg/config.json`). If it does not exist, copy `config.json.example` from the installed package there first. The extension rejects a `config.json` without its `status` section.

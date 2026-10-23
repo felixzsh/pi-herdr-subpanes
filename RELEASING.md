@@ -61,7 +61,7 @@ After the package exists on npm, steady-state releases use npm trusted publishin
 
 1. Open the package settings for `pi-herdr-bg` on [npmjs.com](https://www.npmjs.com/).
 2. Add a trusted publisher for GitHub Actions with:
-   - Organization or user: `giuseppecrj`
+   - Organization or user: `felixzsh`
    - Repository: `pi-herdr-bg`
    - Workflow filename: `publish.yml`
    - Allowed action: `npm publish`
@@ -119,7 +119,7 @@ The workflow stops if the matching version tag already points to a different com
 
 ### npm rejects authentication
 
-Confirm that the trusted publisher matches owner `giuseppecrj`, repository `pi-herdr-bg`, and workflow `publish.yml`, that the job has `id-token: write`, and that the runner is GitHub-hosted. If a release reports that `NPM_TOKEN` is bootstrap-only, remove the secret and use the trusted publisher.
+Confirm that the trusted publisher matches owner `felixzsh`, repository `pi-herdr-bg`, and workflow `publish.yml`, that the job has `id-token: write`, and that the runner is GitHub-hosted. If a release reports that `NPM_TOKEN` is bootstrap-only, remove the secret and use the trusted publisher.
 
 ### npm reports that the version already exists
 
