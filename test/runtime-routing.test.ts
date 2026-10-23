@@ -11,7 +11,7 @@ import {
 	type RuntimeRequest,
 } from "../maestro/core/routing.ts";
 import { wrapPiModelRegistry } from "../maestro/adapters/pi/model-registry.ts";
-import { wrapPiModelRegistry as wrapHostModelRegistry } from "../pi-extension/subagents/model-registry.ts";
+import { wrapPiModelRegistry as wrapHostModelRegistry } from "../pi-extension/herdr-subpanes/model-registry.ts";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 
@@ -339,7 +339,7 @@ describe("Task15 SDK boundary equivalence", () => {
 		}
 		for (const path of [
 			"../maestro/adapters/pi/model-registry.ts",
-			"../pi-extension/subagents/model-registry.ts",
+			"../pi-extension/herdr-subpanes/model-registry.ts",
 		]) {
 			assert.equal(
 				body(readFileSync(new URL(path, import.meta.url), "utf8")),

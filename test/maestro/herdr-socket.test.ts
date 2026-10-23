@@ -155,9 +155,9 @@ describe("pane token report", () => {
 			assert.equal(
 				await reportPaneToken(path, {
 					paneId: "w1:p2",
-					source: "pi-herdr-bg",
+					source: "pi-herdr-subpanes",
 					seq: 7,
-					token: "piha_delegated_v1",
+					token: "pihs_delegated_v1",
 					value: "live",
 					ttlMs: 15_000,
 				}),
@@ -166,9 +166,9 @@ describe("pane token report", () => {
 			assert.equal(
 				await reportPaneToken(path, {
 					paneId: "w1:p2",
-					source: "pi-herdr-bg",
+					source: "pi-herdr-subpanes",
 					seq: 8,
-					token: "piha_delegated_v1",
+					token: "pihs_delegated_v1",
 					value: null,
 				}),
 				"answered",
@@ -180,9 +180,9 @@ describe("pane token report", () => {
 						method: "pane.report_metadata",
 						params: {
 							pane_id: "w1:p2",
-							source: "pi-herdr-bg",
+							source: "pi-herdr-subpanes",
 							seq: 7,
-							tokens: { piha_delegated_v1: "live" },
+							tokens: { pihs_delegated_v1: "live" },
 							ttl_ms: 15_000,
 						},
 					},
@@ -190,9 +190,9 @@ describe("pane token report", () => {
 						method: "pane.report_metadata",
 						params: {
 							pane_id: "w1:p2",
-							source: "pi-herdr-bg",
+							source: "pi-herdr-subpanes",
 							seq: 8,
-							tokens: { piha_delegated_v1: null },
+							tokens: { pihs_delegated_v1: null },
 						},
 					},
 				],
@@ -202,9 +202,9 @@ describe("pane token report", () => {
 	it("distinguishes a missing pane from other failures", async () => {
 		const write = {
 			paneId: "w1:p2",
-			source: "pi-herdr-bg",
+			source: "pi-herdr-subpanes",
 			seq: 1,
-			token: "piha_delegated_v1",
+			token: "pihs_delegated_v1",
 			value: "live",
 		};
 		await withFakeHerdrSocket(

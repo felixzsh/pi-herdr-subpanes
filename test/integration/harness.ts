@@ -1,5 +1,5 @@
 /**
- * Integration test harness for Pi Herdr Background.
+ * Integration test harness for Pi Herdr Subpanes.
  *
  * Provides utilities to:
  * - Detect whether herdr is available

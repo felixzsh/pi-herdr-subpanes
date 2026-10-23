@@ -1,9 +1,9 @@
 ---
-name: pi-herdr-bg
-description: Operate the pi-herdr-bg host. Use when asked to launch, delegate to, supervise, interrupt, cancel, stop, resume, or clean up Pi subagents; to run or inspect background shell jobs; to use worktrees, persistent specialists, or model routing; to edit the host's config.json or model preferences; to install, configure, troubleshoot, or uninstall the optional Herdr sidebar plugin; or when a child looks hung, stalled, or unwanted.
+name: pi-herdr-subpanes
+description: Operate the pi-herdr-subpanes host. Use when asked to launch, delegate to, supervise, interrupt, cancel, stop, resume, or clean up Pi subagents; to run or inspect background shell jobs; to use worktrees, persistent specialists, or model routing; to edit the host's config.json or model preferences; to install, configure, troubleshoot, or uninstall the optional Herdr sidebar plugin; or when a child looks hung, stalled, or unwanted.
 ---
 
-# pi-herdr-bg operating guide
+# pi-herdr-subpanes operating guide
 
 ## Authority and version caveat
 
@@ -257,8 +257,8 @@ initialized submodules). Ignored files are neither blockers nor preserved by
 
 ## Configuration
 
-Durable config: `$PI_CODING_AGENT_DIR/herdr-bg/config.json` (default
-`~/.pi/agent/herdr-bg/config.json`); never the package root. Copy the
+Durable config: `$PI_CODING_AGENT_DIR/herdr-subpanes/config.json` (default
+`~/.pi/agent/herdr-subpanes/config.json`); never the package root. Copy the
 package's `config.json.example`. Run `/reload` after changes. Without a real
 file, only non-model settings fall back to the example. An unknown key is a
 configuration error, so a stale section is reported instead of ignored.
@@ -295,7 +295,7 @@ in the Pi extension**. Neither alone enables sidebar filtering.
    `PATH`. Use `pi list` to check package sources; do not load two copies of
    the extension.
 2. Review the plugin source, then follow the guide to install
-   `felixzsh/pi-herdr-bg/plugins/sidebar` with `herdr plugin install`,
+   `felixzsh/pi-herdr-subpanes/plugins/sidebar` with `herdr plugin install`,
    or link an existing compatible directory with `herdr plugin link`.
    Installing the Pi package does not install the Herdr plugin.
 3. Merge `"sidebar": { "enabled": true }` into the durable config described
@@ -307,15 +307,15 @@ in the Pi extension**. Neither alone enables sidebar filtering.
 5. Invoke Focus explicitly; installation and enablement never activate it:
 
    ```bash
-   herdr plugin action invoke pi-herdr-bg.sidebar.focus
+   herdr plugin action invoke herdr-subpanes.sidebar.focus
    ```
 
 Focus changes the server-wide Agents view, replacing any existing view. It
 hides marked children except those blocked or with unknown status; it never
 stops children or suppresses notifications. To restore rows, invoke
-`herdr plugin action invoke pi-herdr-bg.sidebar.all`. All clears only this
+`herdr plugin action invoke herdr-subpanes.sidebar.all`. All clears only this
 plugin's view and leaves another tool's view untouched. If filtering does not
-work, inspect `herdr plugin log list --plugin pi-herdr-bg.sidebar` and
+work, inspect `herdr plugin log list --plugin herdr-subpanes.sidebar` and
 follow the guide's troubleshooting steps.
 
 ## Denied tools

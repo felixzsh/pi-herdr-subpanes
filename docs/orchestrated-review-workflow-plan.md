@@ -376,8 +376,8 @@ All slices are sequential because they touch the same runtime and lifecycle seam
 
 **Files**
 
-- Add `pi-extension/subagents/workflow.ts` for metadata, hashing, pending state, journal primitives, and control input validation.
-- Update `pi-extension/subagents/index.ts` to register `herdr_workflow` and attach workflow state to the existing process-global runtime.
+- Add `pi-extension/herdr-subpanes/workflow.ts` for metadata, hashing, pending state, journal primitives, and control input validation.
+- Update `pi-extension/herdr-subpanes/index.ts` to register `herdr_workflow` and attach workflow state to the existing process-global runtime.
 - Add `test/workflow.test.ts`; include it in `npm test`.
 
 **Exit criteria**
@@ -392,7 +392,7 @@ All slices are sequential because they touch the same runtime and lifecycle seam
 
 **Files**
 
-- Add `pi-extension/subagents/workflow-worker.js` for VM execution and bridge messages. Keep the Worker as plain JavaScript so it does not depend on Pi's Jiti loader or Node's TypeScript-stripping version.
+- Add `pi-extension/herdr-subpanes/workflow-worker.js` for VM execution and bridge messages. Keep the Worker as plain JavaScript so it does not depend on Pi's Jiti loader or Node's TypeScript-stripping version.
 - Add the minimal internal awaitable child wrapper and workflow-only isolated launch option in `index.ts`; reuse existing watch/session/model behavior without public delivery or public `runningSubagents` registration.
 - Add the runner-owned detached reader-checkout functions in `workflow.ts`; do not route them through Herdr's per-child worktree API.
 - Extend completion sidecar/result types with structured failure evidence.

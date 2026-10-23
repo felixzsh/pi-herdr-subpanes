@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: pi-herdr-bg-release
+  group: pi-herdr-subpanes-release
   cancel-in-progress: false
 
 jobs:

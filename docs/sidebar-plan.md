@@ -1,4 +1,4 @@
-# Pi Herdr Background Sidebar plan
+# Pi Herdr Subpanes Sidebar plan
 
 > **Superseded marker evidence.** This plan's markers relied on the child's
 > Linux `/proc` process identity, and so the plugin declared only `linux`.
@@ -21,7 +21,7 @@ released. See [Implementation status](#implementation-status).
 
 Keep main agents easy to find while delegated children remain accessible through
 Herdr. Build the optional companion in `plugins/sidebar/`, in this repository.
-Its plugin ID is `pi-herdr-bg.sidebar`.
+Its plugin ID is `herdr-subpanes.sidebar`.
 
 The first version exposes two explicit actions:
 
@@ -90,7 +90,7 @@ metadata sources, unconditional clears, and the invalid `not.filters` shape.
 `not` takes one `filter` object.
 
 The metadata marker means recently classified as a delegated child, not proven
-live at render time. Use `piha_delegated_v1 = live` with a 15-second TTL and a
+live at render time. Use `pihs_delegated_v1 = live` with a 15-second TTL and a
 stable metadata source. Missing or unknown-valued markers remain visible.
 The host owns marking, renewal, and cleanup. Tagging is opt-in and off by default.
 Keep writes bounded and ordered, clear during finalization, and stop renewing

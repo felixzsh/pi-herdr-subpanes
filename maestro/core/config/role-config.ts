@@ -40,7 +40,7 @@ export function parseRoleConfig(
 	// user configuration to remove the key.
 	return {
 		deprecations: [
-			`Deprecated setting roles.bundled (${rawConfig.roles.bundled}) in ${source} is ignored: pi-herdr-bg no longer ships bundled roles. Install a role pack or add global or project definitions for the roles you use, then remove roles.bundled. The file was not changed.`,
+			`Deprecated setting roles.bundled (${rawConfig.roles.bundled}) in ${source} is ignored: pi-herdr-subpanes no longer ships bundled roles. Install a role pack or add global or project definitions for the roles you use, then remove roles.bundled. The file was not changed.`,
 		],
 	};
 }

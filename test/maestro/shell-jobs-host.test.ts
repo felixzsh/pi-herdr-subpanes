@@ -13,7 +13,7 @@ import type {
 import { createEventBus } from "@earendil-works/pi-coding-agent";
 import type { TUI } from "@earendil-works/pi-tui";
 
-import subagentsModule from "../../pi-extension/subagents/index.ts";
+import subagentsModule from "../../pi-extension/herdr-subpanes/index.ts";
 import { createFileShellJobStore } from "../../maestro/core/shell-jobs/state.ts";
 import type {
 	ShellJob,

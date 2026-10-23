@@ -77,7 +77,7 @@ function runDetect(
 			writeFileSync(
 				join(dir, "package.json"),
 				JSON.stringify({
-					name: "pi-herdr-bg",
+					name: "pi-herdr-subpanes",
 					version: options.previousVersion,
 				}),
 			);
@@ -94,7 +94,7 @@ function runDetect(
 		writeFileSync(
 			join(dir, "package.json"),
 			JSON.stringify({
-				name: "pi-herdr-bg",
+				name: "pi-herdr-subpanes",
 				version: options.currentVersion ?? "0.0.2",
 			}),
 		);
@@ -210,7 +210,7 @@ globalThis.fetch = async (_url, options) => {
 					GITHUB_OUTPUT: output,
 					GITHUB_SHA: "a".repeat(40),
 					NODE_OPTIONS: `--import=${fetchStub}`,
-					PACKAGE_NAME: "pi-herdr-bg",
+					PACKAGE_NAME: "pi-herdr-subpanes",
 					REGISTRY_SCENARIO: scenario,
 					REGISTRY_URL: "https://registry.test/",
 					VERSION: "0.0.2",
@@ -284,13 +284,13 @@ test("release workflow uses package.json identity and trusted publishing", async
 	const workflow = await readFile(".github/workflows/publish.yml", "utf8");
 	const pkg = JSON.parse(await readFile("package.json", "utf8"));
 
-	assert.equal(pkg.name, "pi-herdr-bg");
+	assert.equal(pkg.name, "pi-herdr-subpanes");
 	assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
 	assert.match(pkg.scripts.test, /--experimental-strip-types/);
 	assert.match(pkg.scripts["test:integration"], /--experimental-strip-types/);
 	assert.match(workflow, /branches:\n\s+- main/);
 	assert.match(workflow, /paths:\n\s+- package\.json/);
-	assert.match(workflow, /concurrency:\n\s+group: pi-herdr-bg-release/);
+	assert.match(workflow, /concurrency:\n\s+group: pi-herdr-subpanes-release/);
 	assert.match(workflow, /id-token:\s*write/);
 	assert.match(workflow, /contents:\s*write/);
 	assert.match(workflow, /node-version:\s*26\.12\.1/);
@@ -332,8 +332,8 @@ test("release workflow uses package.json identity and trusted publishing", async
 	);
 	assert.ok(tag < release, "tagging must precede the GitHub Release");
 	assert.doesNotMatch(
-		workflow.replace("group: pi-herdr-bg-release", ""),
-		/pi-herdr-bg/,
+		workflow.replace("group: pi-herdr-subpanes-release", ""),
+		/pi-herdr-subpanes/,
 		"the workflow must read the package name dynamically, except for the pinned concurrency group",
 	);
 });

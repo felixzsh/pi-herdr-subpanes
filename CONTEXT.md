@@ -72,7 +72,7 @@ cancel signals and judges exit only by it. It reads Linux `/proc`.
 _Avoid_: argv match, foreground process, shell visibility
 
 **Delegated marker**:
-The display-only pane token `piha_delegated_v1=live` that a parent reports on
+The display-only pane token `pihs_delegated_v1=live` that a parent reports on
 a delegated child's pane when `sidebar.enabled` is on. It means Herdr reported
 the child's own session file as the pane's agent session within the last 15
 seconds, not that the child is alive when Herdr draws the row. One stable
@@ -82,7 +82,7 @@ marker; each renewal first rereads that agent session from Herdr. A
 _Avoid_: liveness proof, ownership record, security boundary, per-run source, process identity
 
 **Sidebar Focus**:
-The Herdr agent view that the optional `pi-herdr-bg.sidebar` plugin sets
+The Herdr agent view that the optional `herdr-subpanes.sidebar` plugin sets
 on request. It hides rows whose delegated marker is `live` while their status
 is idle, working, or done, and keeps blocked, unknown, and unmarked rows. All
 clears only this plugin's view and reports a view that another tool owns.
@@ -109,7 +109,7 @@ _Avoid_: Silent Pi reinterpretation, compatibility adapter
 
 **Pack-neutral host**:
 This package as an execution host that ships no agent roles and no planning or
-review workflows. Its only skill, `pi-herdr-bg`, is a general operating guide for its own
+review workflows. Its only skill, `pi-herdr-subpanes`, is a general operating guide for its own
 control tools. Role packs and project or global definitions supply every
 named role. An empty catalog is valid, and bare launches need no role.
 _Avoid_: Default role set, privileged pack, starter workflow

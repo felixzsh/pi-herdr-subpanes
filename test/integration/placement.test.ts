@@ -1,7 +1,7 @@
 import {
 	getSubagentsConfigDir,
 	getSubagentsConfigExamplePath,
-} from "../../pi-extension/subagents/config-path.ts";
+} from "../../pi-extension/herdr-subpanes/config-path.ts";
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -59,7 +59,7 @@ import {
 	createSubagentPaneFactory,
 	loadPaneConfig,
 } from "../../maestro/core/config/pane-config.ts";
-import subagentsExtension from "../../pi-extension/subagents/index.ts";
+import subagentsExtension from "../../pi-extension/herdr-subpanes/index.ts";
 import { isNonEmptyString } from "../../maestro/core/config/type-guards.ts";
 import {
 	createEventBus,
@@ -223,7 +223,7 @@ import { writeFileSync } from "node:fs";
 import { launchPiSubagent, launchOperationsFromSurface } from ${JSON.stringify(launchUrl)};
 import { HerdrSurfaceProvider } from ${JSON.stringify(new URL("../../maestro/surfaces/herdr/herdr-surface-provider.ts", import.meta.url).href)};
 import { loadPaneConfig } from ${JSON.stringify(new URL("../../maestro/core/config/pane-config.ts", import.meta.url).href)};
-import { getSubagentsConfigDir, getSubagentsConfigExamplePath } from ${JSON.stringify(new URL("../../pi-extension/subagents/config-path.ts", import.meta.url).href)};
+import { getSubagentsConfigDir, getSubagentsConfigExamplePath } from ${JSON.stringify(new URL("../../pi-extension/herdr-subpanes/config-path.ts", import.meta.url).href)};
 const cli = (...args) => JSON.parse(execFileSync("herdr", args, { encoding: "utf8" })).result;
 const result = {};
 try {

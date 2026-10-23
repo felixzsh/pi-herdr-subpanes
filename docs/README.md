@@ -25,7 +25,7 @@ are evidence, not shipped contracts, when a later ADR supersedes them.
 
 The package runs asynchronous Pi children in Herdr and supports managed
 worktrees for writing tasks. It ships the
-[`pi-herdr-bg` operating skill](../skills/pi-herdr-bg/SKILL.md), but no
+[`pi-herdr-subpanes` operating skill](../skills/pi-herdr-subpanes/SKILL.md), but no
 agent roles or planning and review workflows. Project definitions, global
 definitions, and installed role packs provide roles
 ([ADR-0013](adr/0013-pack-neutral-execution-host.md)). A `read,bash` tool
@@ -43,7 +43,7 @@ architecture decision.
 - `../maestro/adapters/pi/` — Pi harness and child protocol.
 - `../maestro/surfaces/herdr/` — Herdr provider and CLI driver.
 - `../maestro/runtime/` — run ownership and real Pi/Herdr composition.
-- `../pi-extension/subagents/index.ts` — Pi host entry point;
+- `../pi-extension/herdr-subpanes/index.ts` — Pi host entry point;
   `model-registry.ts` and `config-path.ts` remain permanent host-local owners.
 - `../test/maestro/` — seam conformance and dependency-rule tests; real
   conformance runs in `../test/integration/`.

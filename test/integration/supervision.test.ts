@@ -10,7 +10,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import * as subagentsModule from "../../pi-extension/subagents/index.ts";
+import * as subagentsModule from "../../pi-extension/herdr-subpanes/index.ts";
 import {
 	mkdtempSync,
 	mkdirSync,

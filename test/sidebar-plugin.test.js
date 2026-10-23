@@ -48,10 +48,10 @@ function run(action, socketPath, env = {}) {
 
 describe("sidebar plugin contract", () => {
 	it("hides only a live marker on an idle, working, or done agent", () => {
-		assert.equal(VIEW_SOURCE, "plugin:pi-herdr-bg.sidebar");
+		assert.equal(VIEW_SOURCE, "plugin:herdr-subpanes.sidebar");
 		// One `filter` under `not`; Herdr rejects a `filters` array there.
 		assert.deepEqual(FOCUS_PARAMS, {
-			source: "plugin:pi-herdr-bg.sidebar",
+			source: "plugin:herdr-subpanes.sidebar",
 			label: "focus",
 			filter: {
 				op: "not",
@@ -60,7 +60,7 @@ describe("sidebar plugin contract", () => {
 					filters: [
 						{
 							op: "eq",
-							field: { token: "piha_delegated_v1" },
+							field: { token: "pihs_delegated_v1" },
 							value: "live",
 						},
 						{ op: "in", field: "status", values: ["idle", "working", "done"] },
@@ -89,8 +89,8 @@ describe("sidebar plugin contract", () => {
 
 	it("declares Focus and All with an honest platform and version floor", () => {
 		const manifest = readFileSync(join(pluginDir, "herdr-plugin.toml"), "utf8");
-		assert.match(manifest, /^id = "pi-herdr-bg\.sidebar"$/m);
-		assert.match(manifest, /^name = "Pi Herdr Background Sidebar"$/m);
+		assert.match(manifest, /^id = "herdr-subpanes\.sidebar"$/m);
+		assert.match(manifest, /^name = "Pi Herdr Subpanes Sidebar"$/m);
 		assert.match(
 			manifest,
 			// 0.9.0 is the first release with the agent view API the actions call.

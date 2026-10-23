@@ -48,8 +48,8 @@ import { shellQuote } from "../../maestro/core/shell.ts";
 const PLUGIN_DIR = resolve(
 	fileURLToPath(new URL("../../plugins/sidebar", import.meta.url)),
 );
-const PLUGIN_ID = "pi-herdr-bg.sidebar";
-const TOKEN = "piha_delegated_v1";
+const PLUGIN_ID = "herdr-subpanes.sidebar";
+const TOKEN = "pihs_delegated_v1";
 
 const CONFIG = `onboarding = false
 [terminal]
@@ -426,7 +426,7 @@ describe("sidebar plugin on isolated Herdr", {
 			"plugin",
 		);
 		assert.equal(linked.plugin_id, PLUGIN_ID);
-		assert.equal(linked.name, "Pi Herdr Background Sidebar");
+		assert.equal(linked.name, "Pi Herdr Subpanes Sidebar");
 		assert.equal(linked.warnings, undefined);
 		const actions = (
 			await target.ok("plugin.action.list", { plugin_id: PLUGIN_ID })
@@ -545,7 +545,7 @@ describe("sidebar plugin on isolated Herdr", {
 
 		await target.ok("pane.report_metadata", {
 			pane_id: live,
-			source: "pi-herdr-bg",
+			source: "pi-herdr-subpanes",
 			seq: clock.now * 1000 - 1,
 			tokens: { [TOKEN]: "live" },
 			ttl_ms: 15_000,

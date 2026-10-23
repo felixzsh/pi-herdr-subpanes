@@ -46,7 +46,7 @@ const ordinaryReviewClauses = [
 ];
 // Host-owned operational skills are the only shipped skills; workflow skills
 // such as orchestrate and plan belong to role packs.
-const hostSkills = ["pi-herdr-bg"];
+const hostSkills = ["pi-herdr-subpanes"];
 const hostSkillFiles = new Set(hostSkills.map((n) => `skills/${n}/SKILL.md`));
 const packageFiles = new Set(
 	JSON.parse(
@@ -59,21 +59,21 @@ const packageFiles = new Set(
 
 describe("production package manifest", () => {
 	it("declares the public npm identity and publish metadata", () => {
-		assert.equal(manifest.name, "pi-herdr-bg");
+		assert.equal(manifest.name, "pi-herdr-subpanes");
 		assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
 		assert.equal(manifest.license, "MIT");
 		assert.equal(manifest.publishConfig?.access, "public");
 		assert.equal(
 			manifest.repository?.url,
-			"git+https://github.com/felixzsh/pi-herdr-bg.git",
+			"git+https://github.com/felixzsh/pi-herdr-subpanes.git",
 		);
 		assert.equal(
 			manifest.bugs?.url,
-			"https://github.com/felixzsh/pi-herdr-bg/issues",
+			"https://github.com/felixzsh/pi-herdr-subpanes/issues",
 		);
 		assert.equal(
 			manifest.homepage,
-			"https://github.com/felixzsh/pi-herdr-bg#readme",
+			"https://github.com/felixzsh/pi-herdr-subpanes#readme",
 		);
 		assert.equal(manifest.author?.name, "Giuseppe Rodriguez");
 		assert.equal(manifest.author?.url, "https://github.com/giuseppecrj");
@@ -84,7 +84,7 @@ describe("production package manifest", () => {
 describe("pack-neutral package contents", () => {
 	it("ships only the extension, with no bundled roles or workflow resources", () => {
 		assert.deepEqual(manifest.pi?.extensions, [
-			"./pi-extension/subagents/index.ts",
+			"./pi-extension/herdr-subpanes/index.ts",
 		]);
 		// An explicit `pi` manifest disables conventional `skills/` discovery, so
 		// the host-owned operational skill must be declared to load at all.
@@ -108,7 +108,7 @@ describe("pack-neutral package contents", () => {
 			"CONTEXT.md",
 			"RELEASING.md",
 			"config.json.example",
-			"pi-extension/subagents/index.ts",
+			"pi-extension/herdr-subpanes/index.ts",
 			"examples/role-pack/extension.ts",
 			"examples/role-pack/roles/example-reviewer.md",
 			"docs/worktree-subagents.md",
@@ -139,8 +139,8 @@ describe("pack-neutral package contents", () => {
 			);
 		}
 		for (const path of [
-			"pi-extension/subagents/plan-skill.md",
-			"pi-extension/subagents/workflow-worker.js",
+			"pi-extension/herdr-subpanes/plan-skill.md",
+			"pi-extension/herdr-subpanes/workflow-worker.js",
 			"docs/review-evaluation.md",
 			"oxlint.config.ts",
 		])
@@ -227,13 +227,13 @@ describe("pack-neutral package contents", () => {
 	});
 
 	it("keeps shell job documentation aligned with the registered tools", () => {
-		const skill = readDoc("skills/pi-herdr-bg/SKILL.md");
+		const skill = readDoc("skills/pi-herdr-subpanes/SKILL.md");
 		for (const name of ["bg_shell", "bg_shell_status"])
 			for (const [label, content] of [
 				["README", readme],
 				["docs/tools.md", toolsDoc],
 				["docs/configuration.md", configurationDoc],
-				["skills/pi-herdr-bg/SKILL.md", skill],
+				["skills/pi-herdr-subpanes/SKILL.md", skill],
 			])
 				assert.ok(
 					normalized(content).includes(name),

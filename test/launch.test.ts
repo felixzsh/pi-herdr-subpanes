@@ -1903,7 +1903,7 @@ describe("Pi launch", () => {
 			);
 			assert.equal(child.cwd, worktreePath);
 			const childText = readFileSync(result.running.sessionFile, "utf8");
-			assert.match(childText, /pi-herdr-bg-worktree-handoff/);
+			assert.match(childText, /pi-herdr-subpanes-worktree-handoff/);
 			assert.match(childText, /handoff\/feature/);
 			assert.match(childText, /Implement the bounded change\./);
 			assert.equal(
@@ -2017,7 +2017,7 @@ describe("Pi launch", () => {
 			assert.equal(existsSync(manifest.sessionFile), true);
 			assert.match(
 				readFileSync(manifest.sessionFile, "utf8"),
-				/pi-herdr-bg-worktree-handoff/,
+				/pi-herdr-subpanes-worktree-handoff/,
 			);
 		});
 	});
@@ -2233,7 +2233,7 @@ describe("Pi launch", () => {
 			assert.equal(existsSync(manifest.sessionFile), true);
 			assert.match(
 				readFileSync(manifest.sessionFile, "utf8"),
-				/pi-herdr-bg-worktree-handoff/,
+				/pi-herdr-subpanes-worktree-handoff/,
 			);
 			assert.equal(
 				readFileSync(request.parent.sessionFile, "utf8"),

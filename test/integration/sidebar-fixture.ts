@@ -27,7 +27,7 @@ import {
 } from "../../maestro/surfaces/herdr/herdr-socket.ts";
 import type { JsonObject } from "../../maestro/core/config/type-guards.ts";
 
-export const TOKEN = "piha_delegated_v1";
+export const TOKEN = "pihs_delegated_v1";
 
 /** The commands fixture setup and teardown run. Unit tests replace them. */
 export interface FixtureCommands {

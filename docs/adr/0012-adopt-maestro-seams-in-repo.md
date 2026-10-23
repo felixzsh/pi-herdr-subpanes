@@ -9,7 +9,7 @@
 
 Adopt explicit `HarnessAdapter`, `SurfaceProvider`, and `RunSession` interfaces
 under `maestro/` in this repository. Keep one npm package and the existing
-`pi-extension/subagents/index.ts` Pi extension entry point.
+`pi-extension/herdr-subpanes/index.ts` Pi extension entry point.
 
 Pi remains the sole real harness and Herdr the sole real surface provider.
 In-memory fakes provide conformance coverage, not supported execution paths.

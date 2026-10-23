@@ -44,7 +44,7 @@ import {
 
 const LOG_DIR =
 	process.env.CANCEL_EVIDENCE_DIR ??
-	join(tmpdir(), "pi-herdr-bg-cancel-evidence");
+	join(tmpdir(), "pi-herdr-subpanes-cancel-evidence");
 mkdirSync(LOG_DIR, { recursive: true });
 
 function evidence(label: string, text: string): void {

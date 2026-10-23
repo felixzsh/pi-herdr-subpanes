@@ -270,10 +270,10 @@ language before that repeated need exists.
 
 This decision is based on the current implementation:
 
-- `pi-extension/subagents/index.ts` parses and discovers agent definitions in
+- `pi-extension/herdr-subpanes/index.ts` parses and discovers agent definitions in
   package → global → project load order (later definitions win), so effective
   priority is project > global > package; it also launches child sessions.
-- `pi-extension/subagents/model-config.ts` provides per-agent and global model
+- `pi-extension/herdr-subpanes/model-config.ts` provides per-agent and global model
   defaults; launch-time arguments remain the appropriate workflow override.
 - `README.md` documents `/plan`, `/iterate`, `/btw`, agent discovery,
   frontmatter, and runtime precedence.

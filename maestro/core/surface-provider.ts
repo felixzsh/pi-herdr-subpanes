@@ -1,6 +1,6 @@
 /**
  * The SurfaceProvider seam: the multiplexer is swappable infrastructure, not
- * a foundation. pi-herdr-bg hard-requires Herdr; here Herdr is one
+ * a foundation. pi-herdr-subpanes hard-requires Herdr; here Herdr is one
  * provider among many, behind this interface.
  *
  * Methods may be sync or async; providers choose. The CLI is the only place
@@ -12,7 +12,7 @@ import type {
 } from "./opened-primary-workspace.ts";
 import type { PaneInspection, SurfaceHandle } from "./types.ts";
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type SurfacePlacement =
 	| { kind: "grouped" }
 	| { kind: "split"; direction: "right" | "down" }
@@ -23,10 +23,10 @@ export interface SurfaceInfo {
 	name?: string;
 	cwd?: string;
 	/** Tab or window the surface belongs to. */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	group?: string;
 	/** Provider-native workspace/container id when the provider reports one. */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	workspaceId?: string;
 }
 
@@ -34,7 +34,7 @@ export interface CreateSurfaceOptions {
 	name: string;
 	cwd: string;
 	/** Default: { kind: "grouped" }. */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	placement?: SurfacePlacement;
 }
 
@@ -79,7 +79,7 @@ export class WorktreeProvisioningError extends Error {
 	}
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface WorktreeSurfaceInfo {
 	/** Empty for detached HEAD. */
 	branch: string;
@@ -89,7 +89,7 @@ export interface WorktreeSurfaceInfo {
 	isLinkedWorktree: boolean;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface SurfaceForegroundProcess {
 	pid: number;
 	name?: string;
@@ -98,7 +98,7 @@ export interface SurfaceForegroundProcess {
 	cwd?: string;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface SurfaceProcessInfo {
 	shellPid?: number;
 	foregroundProcessGroupId?: number;
@@ -158,50 +158,50 @@ export interface SurfaceProvider {
 		| Promise<OpenedPrimaryWorkspaceReport | undefined>;
 
 	/** Human-readable hint when isAvailable() is false; today's terminalSetupHint(). */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	setupHint(): string;
 
 	/** Write a script file and run it in the surface; today's runScriptInPane (terminal.ts:115). */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	runScript(
 		surfaceId: string,
 		command: string,
 		options: { scriptPath: string; scriptPreamble: string },
 	): string;
 
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	inspectSurface(surfaceId: string): Promise<PaneInspection>;
 
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	sendKeys(surfaceId: string, keys: string): void | Promise<void>;
 
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	getProcessInfo(
 		surfaceId: string,
 		opts?: { timeoutMs?: number },
 	): SurfaceProcessInfo | Promise<SurfaceProcessInfo>;
 
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	waitForShellReady(
 		surfaceId: string,
 		opts?: { timeoutMs?: number },
 	): Promise<void>;
 
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	waitForSurfaceAbsence(
 		surfaceId: string,
 		opts?: { timeoutMs?: number },
 	): Promise<void>;
 
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	listWorktreeSurfaces(opts?: {
 		cwd?: string;
 		timeoutMs?: number;
 	}): Promise<WorktreeSurfaceInfo[]>;
 
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	focusWorkspace(workspaceId: string): void;
 
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	setTitle(target: "tab" | "workspace", title: string): void;
 }

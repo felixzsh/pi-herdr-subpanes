@@ -1,9 +1,9 @@
 ---
 name: release
-description: Release pi-herdr-bg when the user explicitly requests a release, version bump, or package publication. Run the complete local release gates, create the version commit, push main, and verify the GitHub release workflow.
+description: Release pi-herdr-subpanes when the user explicitly requests a release, version bump, or package publication. Run the complete local release gates, create the version commit, push main, and verify the GitHub release workflow.
 ---
 
-# Release pi-herdr-bg
+# Release pi-herdr-subpanes
 
 Read [`RELEASING.md`](../../../RELEASING.md) before you act. It is the canonical release contract.
 
@@ -19,7 +19,7 @@ Read [`RELEASING.md`](../../../RELEASING.md) before you act. It is the canonical
 1. Run `npm ci`.
 2. Run `npm run format:check`, `npm run lint`, `npm test`, `npm pack --dry-run`, and `git diff --check`.
 3. Load and follow [`../run-integration-tests/SKILL.md`](../run-integration-tests/SKILL.md). Run its deterministic Herdr suite. Do not treat skipped Herdr tests as passing evidence.
-4. Inspect the package preview. It must include `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/subagents/index.ts`; it must contain no `agents/` or `skills/` resources or `pi-extension/subagents/plan-skill.md`; and it must exclude `pi-extension/subagents/workflow-worker.js`. It must exclude plans, journals, sessions, prototypes, generated evidence, and local configuration.
+4. Inspect the package preview. It must include `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/herdr-subpanes/index.ts`; it must contain no `agents/` or `skills/` resources or `pi-extension/herdr-subpanes/plan-skill.md`; and it must exclude `pi-extension/herdr-subpanes/workflow-worker.js`. It must exclude plans, journals, sessions, prototypes, generated evidence, and local configuration.
 
 ## Create and push the release
 
@@ -33,5 +33,5 @@ Read [`RELEASING.md`](../../../RELEASING.md) before you act. It is the canonical
 The push triggers the GitHub **Release** workflow. It publishes to npm, then creates the matching tag and GitHub Release.
 
 1. If GitHub CLI access is available, inspect the workflow result. Otherwise report that publication is pending in **Actions**.
-2. After the workflow succeeds, run `npm view pi-herdr-bg` and confirm the published version.
+2. After the workflow succeeds, run `npm view pi-herdr-subpanes` and confirm the published version.
 3. Report the version, release commit, push result, workflow or publication state, every check result, and any required user action.

@@ -55,7 +55,7 @@ export interface WorktreeSessionFork {
 }
 
 const SUBAGENT_POLICY_VERSION = 2;
-const SUBAGENT_POLICY_SUFFIX = ".pi-herdr-bg-subagent-policy.json";
+const SUBAGENT_POLICY_SUFFIX = ".pi-herdr-subpanes-subagent-policy.json";
 
 export type SubagentSessionOwner = "public" | "managed-worktree";
 
@@ -654,7 +654,7 @@ export function createWorktreeSessionFork(params: {
 	}
 
 	SessionManager.open(params.childSessionFile).appendCustomMessageEntry(
-		"pi-herdr-bg-worktree-handoff",
+		"pi-herdr-subpanes-worktree-handoff",
 		params.handoffMessage,
 		true,
 		{

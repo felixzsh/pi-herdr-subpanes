@@ -1,10 +1,10 @@
 # Worktree subagents
 
-This guide is the operational reference for running writing agents in isolated Git worktrees with `pi-herdr-bg`. For installation and everyday use, see the [README](../README.md). For the complete tool API and status model, see the [tools and lifecycle reference](tools.md). For the product and open-source research behind these choices, see the [research report](research/worktree-subagent-orchestration.md).
+This guide is the operational reference for running writing agents in isolated Git worktrees with `pi-herdr-subpanes`. For installation and everyday use, see the [README](../README.md). For the complete tool API and status model, see the [tools and lifecycle reference](tools.md). For the product and open-source research behind these choices, see the [research report](research/worktree-subagent-orchestration.md).
 
 ## Quick start
 
-Run Pi inside Herdr from a Git checkout, then give each independent writing task a unique branch. The examples name `worker`, `scout`, and `reviewer` roles; `pi-herdr-bg` ships no roles, so those names must come from an installed role pack or a project/global definition. Omit `agent` for a bare child.
+Run Pi inside Herdr from a Git checkout, then give each independent writing task a unique branch. The examples name `worker`, `scout`, and `reviewer` roles; `pi-herdr-subpanes` ships no roles, so those names must come from an installed role pack or a project/global definition. Omit `agent` for a bare child.
 
 ```typescript
 subagent({

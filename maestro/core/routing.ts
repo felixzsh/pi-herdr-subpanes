@@ -49,9 +49,9 @@ export interface ModelRegistryAdapter {
 	find(provider: string, modelId: string): RoutingModel | undefined;
 	available(): RoutingModel[];
 	hasConfiguredAuth(model: { provider: string; id: string }): boolean;
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	supportedThinkingLevels(model: RoutingModel): ThinkingLevel[];
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	clampThinkingLevel(model: RoutingModel, level: ThinkingLevel): ThinkingLevel;
 }
 
@@ -112,7 +112,7 @@ function toRoutingModel(value: any): RoutingModel | undefined {
 	};
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface RoutingRegistrySource {
 	find(provider: string, modelId: string): any;
 	getAvailable?: () => any[];
@@ -120,7 +120,7 @@ export interface RoutingRegistrySource {
 	hasConfiguredAuth?: (model: any) => boolean;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export function createModelRegistryAdapter(
 	registry: RoutingRegistrySource,
 	capabilities: Pick<

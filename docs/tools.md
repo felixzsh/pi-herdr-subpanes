@@ -1,6 +1,6 @@
 # Tools and lifecycle reference
 
-This page is the detailed reference for the tools, commands, and run lifecycle of `pi-herdr-bg`. For installation and everyday use, see the [README](../README.md). Configuration keys are in [Configuration](configuration.md), and role authoring is in [Roles and custom agents](roles.md).
+This page is the detailed reference for the tools, commands, and run lifecycle of `pi-herdr-subpanes`. For installation and everyday use, see the [README](../README.md). Configuration keys are in [Configuration](configuration.md), and role authoring is in [Roles and custom agents](roles.md).
 
 ## What's Included
 
@@ -24,7 +24,7 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 
 | Skill | Description |
 | ----- | ----------- |
-| `pi-herdr-bg` | Operating guide for this host: launching, supervising, interrupting, cancelling and resuming children, worktrees, persistent specialists, model routing and configuration. Loaded by agents on demand; see the [operating skill](../skills/pi-herdr-bg/SKILL.md) |
+| `pi-herdr-subpanes` | Operating guide for this host: launching, supervising, interrupting, cancelling and resuming children, worktrees, persistent specialists, model routing and configuration. Loaded by agents on demand; see the [operating skill](../skills/pi-herdr-subpanes/SKILL.md) |
 
 | Pi child-only tool | Description |
 | ---------------- | ------------------------------------------------------------------------- |

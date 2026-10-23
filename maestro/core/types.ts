@@ -10,7 +10,7 @@
  *  must be able to project its own richer states onto these five. */
 export type AgentState = "idle" | "working" | "blocked" | "done" | "unknown";
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type ThinkingLevel =
 	| "off"
 	| "minimal"
@@ -46,7 +46,7 @@ export interface Task {
 	 * surface command prefix). Core passes it through untouched.
 	 */
 	env?: Record<string, string>;
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	runtime?: {
 		model: string;
 		thinking: ThinkingLevel;
@@ -54,12 +54,12 @@ export interface Task {
 		 *  provider error; today's launchSubagentWithFallbacks (index.ts:2631). */
 		fallbacks?: { model: string; thinking: ThinkingLevel }[];
 	};
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	session?: {
 		mode: "standalone" | "lineage-only" | "fork";
 		parentSessionId?: string;
 	};
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	behavior?: {
 		persistent?: boolean;
 		autoExit?: boolean;
@@ -69,10 +69,10 @@ export interface Task {
 		denyTools?: string[];
 	};
 	/** Explicit tool allowlist; overrides Role.allowedTools when set. */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	tools?: string[];
 	/** Explicit system prompt; overrides Role.systemPrompt when set. */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	systemPrompt?: string;
 }
 
@@ -93,7 +93,7 @@ export interface Role {
 	systemPrompt: string;
 	/** Harness-level tool allowlist. Empty means "harness default". */
 	allowedTools: string[];
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	defaults?: {
 		model?: string;
 		thinking?: ThinkingLevel;
@@ -108,7 +108,7 @@ export interface Role {
 		cwd?: string;
 	};
 	/** Where the definition came from: project, global, or role pack. */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	source?: string;
 }
 
@@ -119,7 +119,7 @@ export type WorktreeState =
 	| "ready_for_review"
 	| "failed"
 	| "needs_help"
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	| "cancelled"
 	| "removed";
 
@@ -179,10 +179,10 @@ export interface AgentHandle {
 	worktree?: Worktree;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type RunOutcome = "completed" | "failed" | "timeout" | "killed" | "help";
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface CompletionResult {
 	reason: "done" | "ping" | "sentinel" | "error";
 	exitCode: number;
@@ -190,7 +190,7 @@ export interface CompletionResult {
 	errorMessage?: string;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface WorktreeHandoff {
 	path: string;
 	branch: string;
@@ -209,17 +209,17 @@ export interface WorktreeHandoff {
 	gitError?: string;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface CompletionEvidence {
 	reason: "done" | "ping" | "sentinel" | "error";
 	/** Required harness exit status from CompletionResult. */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	exitCode: number;
 	ping?: { name: string; message: string };
 	errorMessage?: string;
 	finalMessage?: { text: string; stopReason?: string; errorMessage?: string };
 	/** Harness session reference; for Pi, the session file path. */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	sessionRef?: string;
 	worktree?: WorktreeHandoff;
 }
@@ -232,10 +232,10 @@ export interface RunResult {
 	output?: string;
 	error?: string;
 	durationMs: number;
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	evidence?: CompletionEvidence;
 	/** Present only for operator cancellation; the outcome is then "killed". */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	cancellation?: RunCancellation;
 }
 
@@ -243,7 +243,7 @@ export interface RunResult {
  * Operator cancellation provenance. A delivered cancellation is always
  * confirmed: unconfirmed termination keeps the run live instead of settling.
  */
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface RunCancellation {
 	/** When the terminal intent was recorded, before any abort or kill. */
 	requestedAt: number;
@@ -254,7 +254,7 @@ export interface RunCancellation {
 	error?: string;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type SurfaceAgentStatus =
 	| "idle"
 	| "working"
@@ -262,7 +262,7 @@ export type SurfaceAgentStatus =
 	| "done"
 	| "unknown";
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type PaneInspection =
 	| {
 			kind: "present";
@@ -273,7 +273,7 @@ export type PaneInspection =
 	| { kind: "missing"; error?: string }
 	| { kind: "unavailable"; error?: string };
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type ProcessState =
 	| { kind: "starting"; startedAt: number }
 	| { kind: "running"; startedAt: number; confirmedAt: number }
@@ -299,9 +299,9 @@ export type ProcessState =
 			exitCode?: number;
 	  };
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type SubagentActivityPhase = "starting" | "active" | "waiting" | "done";
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type SubagentActivityScope =
 	| "agent"
 	| "turn"
@@ -309,7 +309,7 @@ export type SubagentActivityScope =
 	| "streaming"
 	| "tool";
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type SubagentActivityEvent =
 	| "session_start"
 	| "input"
@@ -330,7 +330,7 @@ export type SubagentActivityEvent =
 	| "subagent_done"
 	| "session_shutdown";
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface SubagentActivityState {
 	version: 1;
 	runningChildId: string;
@@ -354,12 +354,12 @@ export interface SubagentActivityState {
 	toolEndedAt?: number;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type ActivityReadResult =
 	| { ok: true; activity: SubagentActivityState }
 	| { ok: false; reason: "missing" | "invalid" | "wrong-id"; error?: string };
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type ActivityDetail =
 	| { kind: "none"; observedAt: number }
 	| {
@@ -371,7 +371,7 @@ export type ActivityDetail =
 			sequence: number;
 	  };
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type TurnState =
 	| { kind: "unknown" }
 	| { kind: "starting"; observedAt: number }
@@ -389,7 +389,7 @@ export type TurnState =
 			previousActivitySequence: number | null;
 	  };
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type ActivityHealth =
 	| { kind: "unseen" }
 	| { kind: "healthy"; observedAt: number }
@@ -400,7 +400,7 @@ export type ActivityHealth =
 			error?: string;
 	  };
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type PaneObservation =
 	| { kind: "unknown" }
 	| { kind: "present"; observedAt: number; agentStatus: SurfaceAgentStatus }
@@ -413,10 +413,10 @@ export type PaneObservation =
 	  }
 	| { kind: "missing"; detectedAt: number; error?: string };
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export type CompletionDelivery = "pending" | "delivered" | "suppressed";
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface SubagentLifecycle {
 	process: ProcessState;
 	turn: TurnState;
@@ -430,7 +430,7 @@ export interface SubagentLifecycle {
 	delivery: CompletionDelivery;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface LifecycleProjection {
 	kind:
 		| "starting"

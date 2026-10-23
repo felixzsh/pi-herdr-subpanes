@@ -8,9 +8,9 @@ The maestro seams remain inside one npm package with the same Pi extension
 entry point. Pi is the sole real harness and Herdr the sole real surface
 provider; fakes are for conformance tests only.
 
-- `pi-extension/subagents/index.ts` — Pi composition root: tools/commands,
+- `pi-extension/herdr-subpanes/index.ts` — Pi composition root: tools/commands,
   role-pack event bridge, host policy, widgets, and parent delivery.
-- `pi-extension/subagents/model-registry.ts`, `config-path.ts` — permanent
+- `pi-extension/herdr-subpanes/model-registry.ts`, `config-path.ts` — permanent
   host-local SDK capability glue and configuration-path conventions.
 - `maestro/core/` — seam interfaces/types, activity and lifecycle projection,
   status, routing, wake-ups, and supervision.
@@ -36,7 +36,7 @@ provider; fakes are for conformance tests only.
 - `maestro/runtime/` — run ownership, controls/retries, observation,
   delivery-gated cleanup, Pi composition, worktree operations/handoff, and
   sidebar markers (`delegated-marker.ts`).
-- `pi-extension/subagents/widgets.ts`, `shell-jobs.ts` — the single status
+- `pi-extension/herdr-subpanes/widgets.ts`, `shell-jobs.ts` — the single status
   widget coordinator (shells above subagents) and the shell-job completion
   notice renderer and delivery.
 - `plugins/sidebar/` — the optional Herdr plugin. Its `sidebar.mjs` uses Node

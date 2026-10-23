@@ -37,7 +37,7 @@ export function requestHerdrSocket(
 ): Promise<HerdrSocketReply> {
 	const timeoutMs = options.timeoutMs ?? HERDR_SOCKET_TIMEOUT_MS;
 	const maxReplyBytes = options.maxReplyBytes ?? HERDR_SOCKET_MAX_REPLY_BYTES;
-	const id = `pi-herdr-bg:${process.pid}:${++requestCount}`;
+	const id = `pi-herdr-subpanes:${process.pid}:${++requestCount}`;
 	return new Promise((resolve) => {
 		let settled = false;
 		let received = Buffer.alloc(0);

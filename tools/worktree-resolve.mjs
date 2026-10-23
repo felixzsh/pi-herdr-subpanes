@@ -12,7 +12,7 @@
  * Register this hook instead:
  *
  *   node --experimental-strip-types \
- *     --import /path/to/pi-herdr-bg/tools/worktree-resolve.mjs \
+ *     --import /path/to/pi-herdr-subpanes/tools/worktree-resolve.mjs \
  *     --test test/maestro/example.test.ts
  *
  * A specifier that does not resolve from the worktree is retried with the main

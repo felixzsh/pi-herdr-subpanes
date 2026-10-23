@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import * as subagentsModule from "../../pi-extension/subagents/index.ts";
+import * as subagentsModule from "../../pi-extension/herdr-subpanes/index.ts";
 import { inspectNoProgressSessionTail } from "../../maestro/adapters/pi/session.ts";
 import {
 	createLifecycle,

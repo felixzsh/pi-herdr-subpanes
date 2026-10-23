@@ -14,7 +14,7 @@ import {
 	stopWidgets,
 	type ShellJobWidgetEntry,
 	type SubagentWidgetEntry,
-} from "../../pi-extension/subagents/widgets.ts";
+} from "../../pi-extension/herdr-subpanes/widgets.ts";
 
 type WidgetRecorder = Pick<ExtensionUIContext, "setWidget">;
 type WidgetContent = Parameters<WidgetRecorder["setWidget"]>[1] | string[];

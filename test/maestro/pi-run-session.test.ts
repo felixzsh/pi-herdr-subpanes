@@ -689,7 +689,7 @@ for (const help of [false, true])
 
 // Inspect the existing private owner only; getters would lazily hide leaked entries.
 function ownerEntries(session: runtime.PiRunSession): Map<string, unknown> {
-	const key = Symbol.for("pi-herdr-bg/PiRunSession-owner");
+	const key = Symbol.for("pi-herdr-subpanes/PiRunSession-owner");
 	// SAFETY: the production factory attaches this known private owner symbol.
 	return (
 		session as runtime.PiRunSession & {

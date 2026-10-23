@@ -12,7 +12,7 @@ A role pack ships Markdown role definitions plus a small Pi extension that
 responds synchronously to:
 
 ```text
-pi-herdr-subagents:roles:discover:v1
+pi-herdr-bg:roles:discover:v1
 ```
 
 That event name is a stable protocol identifier and is not renamed with the package.

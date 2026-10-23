@@ -30,7 +30,7 @@ export interface SpawnOptions {
 	cwd: string;
 	sessionId: string;
 	worktree?: Worktree;
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	/** Unprovisioned launch request. Pi resolves base and writes the ownership manifest before resource acquisition. */
 	worktreeRequest?: WorktreeSpec;
 	interactive?: boolean;
@@ -40,19 +40,19 @@ export interface SpawnOptions {
 	surface?: SurfaceHandle;
 	/** Extra environment for the agent process. */
 	env?: Record<string, string>;
-	// pi-herdr-bg extension: carried from Task, see 4.1
+	// pi-herdr-subpanes extension: carried from Task, see 4.1
 	runtime?: Task["runtime"];
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	session?: Task["session"];
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	behavior?: Task["behavior"];
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	tools?: string[];
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	systemPrompt?: string;
 }
 
-// pi-herdr-bg extension
+// pi-herdr-subpanes extension
 export interface ResumeOptions {
 	name: string;
 	/** Harness session reference to resume; for Pi, the session file path. */
@@ -101,7 +101,7 @@ export interface HarnessAdapter {
 	 */
 	exitCode?(handle: AgentHandle): number | undefined;
 
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	resume(opts: ResumeOptions): Promise<AgentHandle>;
 
 	/**
@@ -109,7 +109,7 @@ export interface HarnessAdapter {
 	 * can observe. Driven by wake-ups and sidecar evidence, not polling.
 	 * Rejects on abort.
 	 */
-	// pi-herdr-bg extension
+	// pi-herdr-subpanes extension
 	awaitCompletion(
 		handle: AgentHandle,
 		signal: AbortSignal,

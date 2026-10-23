@@ -4,8 +4,8 @@ This page is the reference for the durable `config.json` settings and model pref
 
 ## Configuration file
 
-The durable user configuration is `$PI_CODING_AGENT_DIR/herdr-bg/config.json`,
-defaulting to `~/.pi/agent/herdr-bg/config.json`. It is not read from the
+The durable user configuration is `$PI_CODING_AGENT_DIR/herdr-subpanes/config.json`,
+defaulting to `~/.pi/agent/herdr-subpanes/config.json`. It is not read from the
 installed package root, so npm and git package upgrades do not overwrite it.
 Create it by copying the installed package's `config.json.example`.
 
@@ -89,7 +89,7 @@ project definitions keep their precedence over them.
 ## Sidebar markers
 
 Set `sidebar.enabled` to `true` to mark delegated children for the optional
-[Pi Herdr Background Sidebar](../plugins/sidebar/README.md) Herdr plugin, whose Focus
+[Pi Herdr Subpanes Sidebar](../plugins/sidebar/README.md) Herdr plugin, whose Focus
 action hides marked children from Herdr's Agents view. The setting defaults to
 `false`.
 
@@ -115,7 +115,7 @@ that was already running when you turned it off is never marked again.
 With markers on, the parent reads each fresh, resumed, persistent, or managed
 worktree child's pane with `pane.get` through `HERDR_SOCKET_PATH`. Once Herdr
 reports the child's own session file as the pane's `agent_session`, within 15
-seconds of launch, the parent reports the pane token `piha_delegated_v1` with
+seconds of launch, the parent reports the pane token `pihs_delegated_v1` with
 the value `live`, a 15-second time-to-live, and an increasing sequence number.
 It renews the token on supervision checks, each time only after Herdr still
 reports that session. Herdr learns each Pi's session from its own Pi

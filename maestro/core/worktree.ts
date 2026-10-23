@@ -47,11 +47,14 @@ export type WorktreeResultState =
 	| "cancelled"
 	| "removed";
 
+/** Stable persisted ownership identifier; existing manifests keep this value. */
+const MANIFEST_OWNER = "pi-herdr-bg";
+
 export function isWorktreeManifest(value: JsonObject): boolean {
 	return (
 		value.version === 1 &&
 		value.kind === "worktree-run" &&
-		value.owner === "pi-herdr-bg"
+		value.owner === MANIFEST_OWNER
 	);
 }
 
@@ -65,7 +68,7 @@ export function mergeWorktreeManifest(
 		...value,
 		version: 1,
 		kind: "worktree-run",
-		owner: "pi-herdr-bg",
+		owner: MANIFEST_OWNER,
 		updatedAt,
 	};
 }

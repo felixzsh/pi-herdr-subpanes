@@ -1,5 +1,5 @@
 {
-  "name": "pi-herdr-bg",
+  "name": "pi-herdr-subpanes",
   "version": "3.3.1",
   "description": "Background Pi subagents and shell jobs in Herdr, with optional isolated Git worktrees",
   "keywords": [
@@ -18,12 +18,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/felixzsh/pi-herdr-bg.git"
+    "url": "git+https://github.com/felixzsh/pi-herdr-subpanes.git"
   },
   "bugs": {
-    "url": "https://github.com/felixzsh/pi-herdr-bg/issues"
+    "url": "https://github.com/felixzsh/pi-herdr-subpanes/issues"
   },
-  "homepage": "https://github.com/felixzsh/pi-herdr-bg#readme",
+  "homepage": "https://github.com/felixzsh/pi-herdr-subpanes#readme",
   "publishConfig": {
     "access": "public"
   },
@@ -52,12 +52,12 @@
   },
   "pi": {
     "extensions": [
-      "./pi-extension/subagents/index.ts"
+      "./pi-extension/herdr-subpanes/index.ts"
     ],
     "skills": [
       "./skills"
     ],
-    "image": "https://raw.githubusercontent.com/felixzsh/pi-herdr-bg/main/docs/assets/pi-herdr-bg-gallery.png"
+    "image": "https://raw.githubusercontent.com/felixzsh/pi-herdr-subpanes/main/docs/assets/pi-herdr-subpanes-gallery.png"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.11",
