@@ -1490,6 +1490,7 @@ interface PersistentSpecialistFacts {
 	sessionFile: string;
 	worktree?: WorktreeHandoff;
 	lastObservedPhase: string;
+	stopFailure?: string;
 }
 
 function persistentSpecialistFacts(
@@ -1510,6 +1511,7 @@ function persistentSpecialistFacts(
 			.kind,
 	};
 	if (worktree) facts.worktree = worktree;
+	if (running.stopFailure) facts.stopFailure = running.stopFailure;
 	return facts;
 }
 
@@ -1524,6 +1526,7 @@ function formatPersistentSpecialistFacts(
 		`Session: ${facts.sessionFile}`,
 		`Last observed phase: ${facts.lastObservedPhase}`,
 	];
+	if (facts.stopFailure) lines.push(`Stop failure: ${facts.stopFailure}`);
 	if (facts.worktree)
 		lines.push(
 			`Worktree Git state: ${facts.worktree.gitError ? "unknown" : facts.worktree.conflicted ? "conflicted" : facts.worktree.clean ? "clean" : "dirty"}`,
@@ -1562,6 +1565,61 @@ function sendPersistentStopFailure(
 	);
 }
 
+function markPersistentStopFailed(
+	running: RunningSubagent,
+	api: Pick<ExtensionAPI, "sendMessage">,
+	io: PiPersistentIO,
+	reason: string,
+): void {
+	running.stopState = "failed";
+	running.stopFailure = reason;
+	const completionApi = runtime.session?.getControlTaskId(running.id)
+		? selectCompletionApi(api, runtime.pi)
+		: api;
+	sendPersistentStopFailure(completionApi, running, io);
+}
+
+// ADR-0016: a stop wait that elapses with the specialist still alive escalates
+// to owned termination through the adapter. The terminal handoff confirms
+// "stopped" and stopState is deliberately left intact for it; only a
+// genuinely unavailable or unconfirmed kill reports "failed".
+function escalatePersistentStopToKill(
+	running: RunningSubagent,
+	api: Pick<ExtensionAPI, "sendMessage">,
+	io: PiPersistentIO,
+	reason: string,
+): void {
+	if (running.stopTimeout) {
+		clearTimeout(running.stopTimeout);
+		running.stopTimeout = undefined;
+	}
+	const session = runtime.session;
+	const control = session?.getControlTaskId(running.id);
+	if (!session || !control) {
+		markPersistentStopFailed(
+			running,
+			api,
+			io,
+			`${reason}; owned termination is unavailable in this session`,
+		);
+		return;
+	}
+	void session.killPersistent(control).then(
+		() => {
+			// Termination is adapter-confirmed; the terminal handoff delivers
+			// the "stopped" notice. Nothing else to record here.
+		},
+		(error) => {
+			markPersistentStopFailed(
+				running,
+				api,
+				io,
+				`${reason}; ${error instanceof Error ? error.message : String(error)}`,
+			);
+		},
+	);
+}
+
 function startPersistentStopTimeout(
 	running: RunningSubagent,
 	api: Pick<ExtensionAPI, "sendMessage">,
@@ -1576,15 +1634,13 @@ function startPersistentStopTimeout(
 	running.stopTimeout = setTimeout(() => {
 		running.stopTimeout = undefined;
 		if (!runningSubagents.has(running.id)) return;
-		if (running.stopState === "requested" || running.stopState === "pending") {
-			running.stopState = "failed";
-			running.stopFailure =
-				"process exit was not confirmed within the bounded stop wait";
-			const completionApi = runtime.session?.getControlTaskId(running.id)
-				? selectCompletionApi(api, runtime.pi)
-				: api;
-			sendPersistentStopFailure(completionApi, running, io);
-		}
+		if (running.stopState === "requested" || running.stopState === "pending")
+			escalatePersistentStopToKill(
+				running,
+				api,
+				io,
+				"process exit was not confirmed within the bounded stop wait",
+			);
 	}, stopTimeoutMs);
 	running.stopTimeout.unref();
 }
@@ -1601,6 +1657,7 @@ function handleSubagentStop(
 	api: Pick<ExtensionAPI, "sendMessage">,
 	stopTimeoutMs = 15_000,
 	io: PiPersistentIO,
+	force = false,
 ): AgentToolResult<SubagentStopDetails> {
 	const resolved = resolvePersistentTarget(params);
 	if ("error" in resolved) {
@@ -1610,7 +1667,9 @@ function handleSubagentStop(
 		};
 	}
 	const running = resolved.running;
-	if (running.stopState === "requested" || running.stopState === "pending") {
+	const already =
+		running.stopState === "requested" || running.stopState === "pending";
+	if (already && !force) {
 		const error = `Stop is already requested for persistent specialist "${running.name}".`;
 		return {
 			content: [{ type: "text", text: error }],
@@ -1626,17 +1685,33 @@ function handleSubagentStop(
 		};
 	}
 	const pending = running.taskId != null;
-	running.stopState = pending ? "pending" : "requested";
-	running.stopTimeoutMs = stopTimeoutMs;
-	io.requestStop(asPiRecord(running));
-	if (!pending) startPersistentStopTimeout(running, api, stopTimeoutMs, io);
+	if (!already) {
+		running.stopState = pending ? "pending" : "requested";
+		running.stopTimeoutMs = stopTimeoutMs;
+		io.requestStop(asPiRecord(running));
+	}
+	// ADR-0016: the wait is bounded in every case. A task that never settles
+	// (deaf or compact-stranded child) no longer strands the stop: the elapsed
+	// wait escalates to owned termination instead of reporting failure.
+	if (force)
+		escalatePersistentStopToKill(running, api, io, "force stop requested");
+	else startPersistentStopTimeout(running, api, stopTimeoutMs, io);
+	const waitSeconds = Math.max(1, Math.round(stopTimeoutMs / 1000));
+	let text: string;
+	if (force)
+		text =
+			`Force stop for persistent specialist "${running.name}": ` +
+			"terminating now; confirmation arrives as subagent_stop.";
+	else if (pending)
+		text =
+			`Stop pending for persistent specialist "${running.name}": ` +
+			`its active task has ${waitSeconds}s to settle first.`;
+	else text = `Stop requested for persistent specialist "${running.name}".`;
 	return {
 		content: [
 			{
 				type: "text",
-				text: pending
-					? `Stop pending for persistent specialist "${running.name}"; its active task will settle first.`
-					: `Stop requested for persistent specialist "${running.name}".`,
+				text,
 			},
 		],
 		details: {
@@ -2494,12 +2569,13 @@ export default function subagentsExtension(
 					outcome: "dispatched",
 				};
 			},
-			stop(record, timeout, io) {
+			stop(record, timeout, io, force = false) {
 				const details = handleSubagentStop(
 					{ id: record.id },
 					runtime.pi!,
 					timeout,
 					io,
+					force,
 				).details;
 				return details.error
 					? { error: details.error, id: details.id, name: details.name }
@@ -3265,7 +3341,10 @@ export default function subagentsExtension(
 			name: "subagent_stop",
 			label: "Stop Persistent Specialist",
 			description:
-				"Gracefully stop a persistent specialist after its active task settles. Exit is confirmed before the specialist is removed.",
+				"Stop a persistent specialist. The active task gets a " +
+					"bounded wait to settle, then the specialist is " +
+					"terminated; force skips the wait. Exit is confirmed " +
+					"before the specialist is removed.",
 			parameters: Type.Object({
 				id: Type.Optional(
 					Type.String({
@@ -3278,6 +3357,12 @@ export default function subagentsExtension(
 						description: "Exact unambiguous persistent specialist name",
 					}),
 				),
+				force: Type.Optional(
+					Type.Boolean({
+						description:
+							"Terminate promptly instead of waiting for the active task to settle",
+					}),
+				),
 			}),
 			async execute(_toolCallId, params) {
 				const target = resolvePersistentTarget(params);
@@ -3288,6 +3373,8 @@ export default function subagentsExtension(
 					};
 				const details = await runtime.session!.stopPersistent(
 					runtime.session!.getControlTaskId(target.running.id)!,
+					undefined,
+					params.force === true,
 				);
 				const text =
 					"error" in details

@@ -38,6 +38,8 @@ needed. No session history is deleted; old shell-job state under
 
 The widget shows `stalled` when pane inspection fails or the pane disappears without a completion record. Time alone never makes a run stalled. A no-progress advisory warns once per episode and never interrupts, kills, retries, or restarts a child. Interrupt the child with `subagent_interrupt`, end an ordinary run with `subagent_cancel`, or stop a persistent specialist with `subagent_stop`. See [In-progress status updates](tools.md#in-progress-status-updates) and [Supervision transport](configuration.md#supervision-transport).
 
+If a persistent specialist's stop seems stuck (`Stop is already requested` on every retry while the child looks idle), the child likely stopped consuming its inbox — for example after a manual `/compact` inside the child pane retired its task poller while a task was still unsettled. The stop wait is bounded: when it elapses, the host terminates the specialist and reports `stopped`. To skip the wait, retry with `subagent_stop({ id|name, force: true })`.
+
 A child that keeps its session open after a turn (`auto-exit: false`) reports
 its result when the turn ends, so it does not need `subagent_done`. If it stays
 running with no result at all, check whether the last message ended mid-tool-use

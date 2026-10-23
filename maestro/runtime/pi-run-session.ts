@@ -307,6 +307,7 @@ export interface PiPersistentHostOperations {
 		record: PiRunRecord,
 		timeoutMs: number,
 		io: PiPersistentIO,
+		force?: boolean,
 	): PiStopAcknowledgement;
 	drain(record: PiRunRecord, io: PiPersistentIO): void;
 }
@@ -397,7 +398,11 @@ export interface PiRunSession extends RunSession {
 	stopPersistent(
 		taskId: string,
 		timeoutMs?: number,
+		force?: boolean,
 	): Promise<PiStopAcknowledgement>;
+	/** Terminate a persistent run through its adapter; the terminal handoff
+	 * confirms the stop. Rejects when termination stays unconfirmed. */
+	killPersistent(taskId: string): Promise<void>;
 	inspectProgress(taskId: string): PiProgressEvidence;
 	diagnostics(): {
 		mode: "wake+batch" | "polling(forced)" | "polling(fallback)";
@@ -1238,8 +1243,11 @@ export function createDefaultRunSession(
 		async sendPersistent(id, text) {
 			return state.options.persistent.send(record(id), text, io);
 		},
-		async stopPersistent(id, timeoutMs = 15_000) {
-			return state.options.persistent.stop(record(id), timeoutMs, io);
+		async stopPersistent(id, timeoutMs = 15_000, force = false) {
+			return state.options.persistent.stop(record(id), timeoutMs, io, force);
+		},
+		async killPersistent(id) {
+			return state.kernel.kill(id);
 		},
 		async send(id, text) {
 			const ack = await facade.sendPersistent(id, text);

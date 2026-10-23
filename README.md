@@ -132,7 +132,7 @@ The parent session gets these tools:
 | `subagent_interrupt` | Stop the current turn of a running child. The session stays open. |
 | `subagent_cancel` | End an ordinary run. No fallback model is tried, and one cancelled result is delivered. |
 | `subagent_send` | Send the next task to an idle persistent specialist. |
-| `subagent_stop` | Stop a persistent specialist after its active task settles. |
+| `subagent_stop` | Stop a persistent specialist: bounded wait for the active task, then termination. `force` skips the wait. |
 | `subagent_resume` | Resume an earlier child session in a new ordinary pane. |
 | `subagents_list` | List agent definitions, live specialists, and the supervision mode. |
 | `worktree_list` | List managed worktrees and what blocks their cleanup. |
@@ -175,7 +175,7 @@ Three tools end or pause work, and each does something different:
 | --- | --- | --- |
 | Stop the current turn but keep the child | `subagent_interrupt({ id \| name })` | Sends Escape. The pane and session stay open, and the widget shows `interrupted`. |
 | End an ordinary run | `subagent_cancel({ id \| name })` | Records the cancel first, so no fallback or retry follows. Closes an ordinary pane. A worktree keeps its workspace. One cancelled result arrives. |
-| End a persistent specialist | `subagent_stop({ id \| name })` | Waits for the active task, confirms process exit, then releases the name. |
+| End a persistent specialist | `subagent_stop({ id \| name, force? })` | Bounded wait for the active task, then termination; confirms process exit, then releases the name. |
 
 `subagent_cancel` rejects persistent specialists. If termination cannot be confirmed, cancel reports `unconfirmed`, and the run stays live and supervised. Call it again to retry. Do not poll after a cancel or stop. The result arrives as a message.
 

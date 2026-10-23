@@ -98,11 +98,12 @@ tools, model, thinking, and worktree binding are fixed at launch.
   completion notice — record it outside the turn, because tool details do not
   survive context compaction. The name also resolves while unambiguous, and an
   `id` miss falls back to name resolution before erroring.
-- `subagent_stop({ id|name })` is graceful: with an active task it becomes
-  `stop-pending`, the task finishes first, and `stopped` is reported only after
-  process-exit evidence.
-- A timed-out stop leaves it `stalled` with an unconfirmed stop; sends are
-  rejected. Retry `subagent_stop` or spawn a replacement.
+- `subagent_stop({ id|name, force? })` is graceful first, then decisive: an
+  active task gets a bounded wait to settle, then the specialist is
+  terminated; every stop ends `stopped` or, only when termination itself
+  stays unconfirmed, `stalled`. `force: true` skips the wait.
+- A `stalled` specialist rejects sends while retaining evidence. Retry
+  `subagent_stop` (or with `force`) or spawn a replacement.
 - Persistent specialists cannot be resumed; after a crash or confirmed stop,
   spawn a new one. No automatic restart or revival.
 - A persistent worktree specialist holds its worktree for its lifetime.
@@ -112,7 +113,7 @@ tools, model, thinking, and worktree binding are fixed at launch.
 | Goal | Use | Effect | Not guaranteed |
 | --- | --- | --- | --- |
 | Halt the child's current model turn, keep its session | `subagent_interrupt({ id\|name })` | Sends Escape only; pane, process, session stay; label `interrupted` | No result emitted; child not stopped; may start work again |
-| End a persistent specialist | `subagent_stop` | Graceful, then confirmed exit | Persistent only; not immediate |
+| End a persistent specialist | `subagent_stop` | Bounded wait for the active task, then termination; `force` skips the wait | Persistent only; stop always ends, never hangs |
 | Continue an exited ordinary child | `subagent_resume` | New ordinary pane on the old session | Rejected for managed-worktree and persistent sessions; cannot change model |
 | Follow up a live persistent specialist | `subagent_send` | One task if idle | Rejected while busy or stop-unconfirmed |
 | Terminate an ordinary child | `subagent_cancel({ id\|name })` | Records cancel intent first, terminates the owned process, delivers one `cancelled` result; no fallback or retry | Ordinary only (persistent rejected); not confirmed unless the status says so |

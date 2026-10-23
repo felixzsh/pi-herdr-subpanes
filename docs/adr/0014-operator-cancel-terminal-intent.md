@@ -1,6 +1,6 @@
 # ADR-0014: Operator cancel records terminal intent before termination
 
-- **Status:** Accepted
+- **Status:** Accepted; §8 partially superseded by [ADR-0016](0016-bounded-persistent-stop.md)
 - **Date:** 2026-10-05
 - **Scope:** Public `subagent_cancel` for ordinary managed Pi subagents
 

@@ -69,8 +69,9 @@ real implementations; in-memory fakes are conformance fixtures only.
 | [`0011`](adr/0011-explicit-worktree-cleanup.md) | Accepted; amended by 0015 | Authorize explicit worktree cleanup by cwd containment; retain branches and reject automatic reaping. |
 | [`0012`](adr/0012-adopt-maestro-seams-in-repo.md) | Accepted | Adopt in-repo seams and conformance fakes; keep one package, Pi-only execution, and Herdr-only surfaces. |
 | [`0013`](adr/0013-pack-neutral-execution-host.md) | Accepted | Ship a pack-neutral execution host; roles and workflows move to optional packs, and `/iterate` and `/btw` are removed. |
-| [`0014`](adr/0014-operator-cancel-terminal-intent.md) | Accepted | Operator cancel records terminal intent before owned termination: no fallback, one confirmed cancelled result, unconfirmed runs stay live. |
+| [`0014`](adr/0014-operator-cancel-terminal-intent.md) | Accepted; §8 partially superseded by 0016 | Operator cancel records terminal intent before owned termination: no fallback, one confirmed cancelled result, unconfirmed runs stay live. |
 | [`0015`](adr/0015-report-opened-primary-workspace.md) | Accepted | Report, and never automatically close, a primary workspace that worktree creation opened. |
+| [`0016`](adr/0016-bounded-persistent-stop.md) | Accepted | Bound `subagent_stop` with kill escalation and `force`: every stop ends `stopped` or `failed`, never stranded `pending`. |
 
 ## Historical material
 

@@ -489,7 +489,9 @@ const subagentsModule = {
 			params: Parameters<typeof hostModule.__test__.handleSubagentStop>[0],
 			api: Parameters<typeof hostModule.__test__.handleSubagentStop>[1],
 			timeout = 15_000,
-		) => hostModule.__test__.handleSubagentStop(params, api, timeout, testIO),
+			force = false,
+		) =>
+			hostModule.__test__.handleSubagentStop(params, api, timeout, testIO, force),
 		deliverPersistentTaskEvent: (
 			record: Parameters<
 				typeof hostModule.__test__.deliverPersistentTaskEvent
@@ -10039,7 +10041,7 @@ describe("persistent subagent stop", () => {
 		};
 	}
 
-	it("records stop-pending for an active task and never abandons it", () => {
+	it("records stop-pending for an active task with a bounded wait", () => {
 		withTempDir((dir) => {
 			const sessionFile = join(dir, "stop-pending.jsonl");
 			const policy = writeSubagentSessionPolicy(sessionFile, {
@@ -10051,10 +10053,12 @@ describe("persistent subagent stop", () => {
 				generationId: "generation-stop",
 			});
 			testApi.runningSubagents.clear();
-			testApi.runningSubagents.set(
-				"logical-stop",
-				persistentFixture(sessionFile, policy.policyHash, true),
+			const running = persistentFixture(
+				sessionFile,
+				policy.policyHash,
+				true,
 			);
+			testApi.runningSubagents.set("logical-stop", running);
 			const result = testApi.handleSubagentStop(
 				{ id: "logical-stop" },
 				{ sendMessage() {} },
@@ -10069,11 +10073,15 @@ describe("persistent subagent stop", () => {
 				readPersistentDeliveryLedger(sessionFile).at(-1)?.outcome,
 				"stop-pending",
 			);
+			if (running.stopTimeout) {
+				clearTimeout(running.stopTimeout);
+				running.stopTimeout = undefined;
+			}
 			testApi.runningSubagents.clear();
 		});
 	});
 
-	it("starts the stop timeout after its active task settles", async () => {
+	it("fails a pending stop when the wait elapses after settle", async () => {
 		const dir = createTestDir();
 		try {
 			const sessionFile = join(dir, "delayed-stop.jsonl");
@@ -10095,7 +10103,6 @@ describe("persistent subagent stop", () => {
 				},
 			};
 			testApi.handleSubagentStop({ id: running.id }, api, 0);
-			await new Promise((resolve) => setTimeout(resolve, 5));
 			assert.equal(running.stopState, "pending");
 			const event = appendPersistentTaskEvent(sessionFile, {
 				type: "task-done",
@@ -10183,7 +10190,7 @@ describe("persistent subagent stop", () => {
 
 			assert.equal(result.details.status, "stop_pending");
 			assert.equal(running.stopState, "pending");
-			assert.equal(running.stopTimeout, undefined);
+			assert.ok(running.stopTimeout);
 			assert.equal(
 				readPersistentDeliveryLedger(sessionFile).at(-1)?.outcome,
 				"stop-pending",
@@ -10270,6 +10277,152 @@ describe("persistent subagent stop", () => {
 				}, 5);
 			}),
 		);
+	});
+
+	function runtimeSlot(): { session: unknown; pi: unknown } {
+		// SAFETY: this process-local extension runtime is owned by index.ts.
+		return (globalThis as any)[Symbol.for("pi-subagents/runtime")];
+	}
+
+	it("escalates a pending stop to kill when the wait elapses", async () => {
+		const dir = createTestDir();
+		try {
+			const sessionFile = join(dir, "escalate-stop.jsonl");
+			const policy = writeSubagentSessionPolicy(sessionFile, {
+				owner: "public",
+				tools: ["read"],
+				deniedTools: [],
+				persistent: true,
+				logicalId: "logical-stop",
+				generationId: "generation-stop",
+			});
+			testApi.runningSubagents.clear();
+			const running = persistentFixture(sessionFile, policy.policyHash, true);
+			testApi.runningSubagents.set(running.id, running);
+			const killed: string[] = [];
+			const slot = runtimeSlot();
+			const previousSession = slot.session;
+			slot.session = {
+				getControlTaskId: () => "control-stop",
+				killPersistent: async (id: string) => {
+					killed.push(id);
+				},
+			};
+			try {
+				const messages: any[] = [];
+				const result = testApi.handleSubagentStop(
+					{ id: running.id },
+					{ sendMessage: (m: any) => messages.push(m) },
+					0,
+				);
+				assert.equal(result.details.status, "stop_pending");
+				await new Promise((r) => setTimeout(r, 10));
+				assert.deepEqual(killed, ["control-stop"]);
+				assert.equal(running.stopState, "pending");
+				assert.equal(messages.length, 0);
+			} finally {
+				slot.session = previousSession;
+				testApi.runningSubagents.clear();
+			}
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("force terminates a pending stop without waiting", async () => {
+		const dir = createTestDir();
+		try {
+			const sessionFile = join(dir, "force-stop.jsonl");
+			const policy = writeSubagentSessionPolicy(sessionFile, {
+				owner: "public",
+				tools: ["read"],
+				deniedTools: [],
+				persistent: true,
+				logicalId: "logical-stop",
+				generationId: "generation-stop",
+			});
+			testApi.runningSubagents.clear();
+			const running = persistentFixture(sessionFile, policy.policyHash, true);
+			testApi.runningSubagents.set(running.id, running);
+			const killed: string[] = [];
+			const slot = runtimeSlot();
+			const previousSession = slot.session;
+			slot.session = {
+				getControlTaskId: () => "control-stop",
+				killPersistent: async (id: string) => {
+					killed.push(id);
+				},
+			};
+			try {
+				const messages: any[] = [];
+				const result = testApi.handleSubagentStop(
+					{ id: running.id },
+					{ sendMessage: (m: any) => messages.push(m) },
+					60_000,
+					true,
+				);
+				assert.equal(result.details.status, "stop_pending");
+				const text = result.content
+					.map((c) => ("text" in c ? String(c.text) : ""))
+					.join("\n");
+				assert.match(text, /Force stop/);
+				await new Promise((r) => setTimeout(r, 10));
+				assert.deepEqual(killed, ["control-stop"]);
+				assert.equal(running.stopTimeout, undefined);
+				assert.equal(messages.length, 0);
+			} finally {
+				slot.session = previousSession;
+				testApi.runningSubagents.clear();
+			}
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("marks a stop failed when the escalated kill is refused", async () => {
+		const dir = createTestDir();
+		try {
+			const sessionFile = join(dir, "refused-kill.jsonl");
+			const policy = writeSubagentSessionPolicy(sessionFile, {
+				owner: "public",
+				tools: ["read"],
+				deniedTools: [],
+				persistent: true,
+				logicalId: "logical-stop",
+				generationId: "generation-stop",
+			});
+			testApi.runningSubagents.clear();
+			const running = persistentFixture(sessionFile, policy.policyHash, true);
+			testApi.runningSubagents.set(running.id, running);
+			const slot = runtimeSlot();
+			const previousSession = slot.session;
+			const previousPi = slot.pi;
+			const messages: any[] = [];
+			slot.session = {
+				getControlTaskId: () => "control-stop",
+				killPersistent: async () => {
+					throw new Error("pane gone, process alive");
+				},
+			};
+			slot.pi = { sendMessage: (m: any) => messages.push(m) };
+			try {
+				testApi.handleSubagentStop(
+					{ id: running.id },
+					{ sendMessage: (m: any) => messages.push(m) },
+					0,
+				);
+				await new Promise((r) => setTimeout(r, 10));
+				assert.equal(running.stopState, "failed");
+				assert.equal(messages.length, 1);
+				assert.match(messages[0].content, /pane gone, process alive/);
+			} finally {
+				slot.session = previousSession;
+				slot.pi = previousPi;
+				testApi.runningSubagents.clear();
+			}
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 
 	it("rejects a persistent spawn at the cap before resource creation", () => {
