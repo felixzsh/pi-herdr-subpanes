@@ -185,10 +185,16 @@ function buildSubagentRoutingGuidelines(catalog?: string): string[] {
 	return [
 		"Act as the coordinator: decompose the work, give each child one bounded outcome — goal, allowed files, verification, and whether to commit — and keep dependent writes sequential; parallelize only independent tasks.",
 		"Children are leaves by default: they do not push, merge, deploy, or orchestrate further agents unless their task explicitly authorizes it. The parent inspects each result or worktree handoff (diff against the reported base, run relevant tests) and owns integration, verification, and cleanup.",
-		"For orchestrated subagent work, explicitly set both model and thinking for every child: first choose a fast, mid, or frontier provider-family tier matched to task complexity, then set thinking within that model's supported range.",
+		"For named agents, omit model and thinking so the child runs the role's " +
+			"configured runtime (role frontmatter, then models.agents, then " +
+			"models.default). Only set them explicitly for bare spawns or a " +
+			"justified per-launch override; never invent a model id.",
 		"Use fast tier for bounded mechanical work and recon, mid tier for ordinary implementation or review, and frontier tier for architecture, security, hard diagnosis, or adversarial review. Use minimal/low thinking for mechanical work, medium for ordinary work, and high+ for hard work.",
 		"For ordinary review, prefer a different authenticated model family. When no other authenticated model family is available, ordinary review may use a same-family reviewer in a fresh standalone session. Disclose that this review is context-isolated, not cross-family independent. Cross-family verification must not use this fallback. Use an exact authenticated provider/model-id from the live catalog below, never an alias or fuzzy name.",
-		"Omitting model and thinking still inherits the parent runtime, but this is a discouraged fallback for orchestrated children.",
+		"Omitting both still inherits the parent runtime when nothing else " +
+			"configures one. With models.enforceAgentDefaults, a per-launch model " +
+			"or thinking that contradicts a named agent's configured runtime is " +
+			"rejected.",
 		"Before launching a new group of subagents, choose a short task slug and name each new child <task>-<role>[-n], for example login-api or login-test2. Use only plan, research, ui, api, build, test, review, browser, security, perf, or merge as roles; leave existing names unchanged. After the final launch, print name | agent kind | role | model | worktree (if any), then use each name in prompts, handoffs, and results.",
 		catalog ??
 			"Authenticated subagent model catalog becomes available after session start.",
@@ -201,7 +207,11 @@ const ThinkingLevelSchema = Type.Union(
 	THINKING_LEVELS.map((level) => Type.Literal(level)),
 	{
 		description:
-			"Pi thinking level. Pick the model tier first, then set thinking within that model's range: minimal/low for bounded mechanical work, medium for ordinary implementation or review, high+ for architecture, security, or hard diagnosis. Omitting still inherits the parent level; do not omit on orchestrated child work.",
+			"Pi thinking level. Omit it for named agents so the child uses the role's " +
+			"configured thinking. Only set it for bare spawns or a justified " +
+			"override, within the model's supported range: minimal/low for bounded " +
+			"mechanical work, medium for ordinary implementation or review, high+ " +
+			"for architecture, security, or hard diagnosis.",
 	},
 );
 
@@ -226,7 +236,19 @@ const SubagentParams = Type.Object({
 	model: Type.Optional(
 		Type.String({
 			description:
-				"Explicitly pick an exact authenticated provider/model-id, or an ordered comma-separated fallback list such as provider/preferred, provider/fallback. For ordinary review, prefer a different authenticated model family. When no other authenticated model family is available, ordinary review may use a same-family reviewer in a fresh standalone session. Disclose that this review is context-isolated, not cross-family independent. Cross-family verification must not use this fallback. Omitting still inherits the parent model; do not omit for orchestrated children. Fallback lists cannot be used with worktrees.",
+				"Omit this for named agents so the child uses its configured runtime " +
+				"(role frontmatter, then models.agents, then models.default). Only " +
+				"set an exact authenticated provider/model-id for bare spawns or a " +
+				"justified per-launch override; never invent a model id. A value can " +
+				"be an ordered comma-separated fallback list such as " +
+				"provider/preferred, provider/fallback. For ordinary review, prefer " +
+				"a different authenticated model family. When no other authenticated " +
+				"model family is available, ordinary review may use a same-family " +
+				"reviewer in a fresh standalone session. Disclose that this review " +
+				"is context-isolated, not cross-family independent. Cross-family " +
+				"verification must not use this fallback. With " +
+				"models.enforceAgentDefaults, overriding a named agent's configured " +
+				"model is rejected. Fallback lists cannot be used with worktrees.",
 		}),
 	),
 	thinking: Type.Optional(ThinkingLevelSchema),
@@ -747,6 +769,14 @@ function resolveResultPresentation(
 	if (attempted.length > 1)
 		body += `\nModels attempted: ${attempted.join(", ")}`;
 	if (usedModel) body += `\nModel used: ${usedModel}`;
+	if (result.runtimePlan)
+		body +=
+			`\nRuntime source: model=${result.runtimePlan.modelSource}, ` +
+			`thinking=${result.runtimePlan.thinkingSource}`;
+	if (result.runtimePlan?.thinkingAdjustment)
+		body +=
+			`\nThinking adjusted: ${result.runtimePlan.thinkingAdjustment.from} unsupported, ` +
+			`using ${result.runtimePlan.thinkingAdjustment.to}`;
 	if (result.fallbackFailures?.length) {
 		body +=
 			"\nModel failures (raw errors, in attempt order):" +
@@ -2051,10 +2081,15 @@ function resolveSubagentRuntimePlans(
 	}
 	if (!ctx.model)
 		throw new Error("Subagent launch requires a resolved parent model");
+	const agentModel = resolveModelDefault(
+		params.agent,
+		agentDefs?.model,
+		modelConfig,
+	);
 	const plans = resolveRuntimePlans(
 		{ model: params.model, thinking: params.thinking },
 		{
-			model: resolveModelDefault(params.agent, agentDefs?.model, modelConfig),
+			model: agentModel,
 			thinking: agentDefs?.thinking,
 		},
 		{
@@ -2063,6 +2098,10 @@ function resolveSubagentRuntimePlans(
 			thinking: parentThinking,
 		},
 		wrapPiModelRegistry(ctx.modelRegistry),
+		{
+			agentName: params.agent,
+			enforceAgentDefaults: modelConfig.enforceAgentDefaults,
+		},
 	);
 	if (params.worktree && plans.length > 1) {
 		throw new Error(
@@ -3005,6 +3044,18 @@ export default function subagentsExtension(
 				const handle = await session.spawnPi(input);
 				const running = session.getRecord(id)!;
 				const startedDetails = session.getStarted(id)!;
+				const startedPlan = startedDetails.runtimePlan;
+				const runtimeOrigin =
+					!startedPlan || startedPlan.modelSource === "parent"
+						? "parent runtime"
+						: startedPlan.modelSource === "agent"
+							? "agent default"
+							: "parent override";
+				const thinkingNote =
+					startedPlan?.thinkingAdjustment == null
+						? ""
+						: ` Thinking ${startedPlan.thinkingAdjustment.from} is ` +
+							`unsupported, using ${startedPlan.thinkingAdjustment.to}.`;
 				// The tool's signal is not a producer signal. Delivery belongs to RunSession.
 				void session.supervise(handle, session.getTask(id)!).catch(() => {
 					// Delivery failure retains manual panes; no second send or cleanup producer.
@@ -3023,6 +3074,12 @@ export default function subagentsExtension(
 									? ` in worktree ${running.worktree.path} on branch ${running.worktree.branch}. `
 									: ". ") +
 								launchDiagnosticsText(running.worktree?.diagnostics, "", " ") +
+								(startedPlan
+									? `Model ${startedPlan.model} · ` +
+										`${startedPlan.thinking} (${runtimeOrigin}).` +
+										thinkingNote +
+										" "
+									: "") +
 								(running.persistent
 									? `Persistent specialist "${params.name}": send follow-up tasks with subagent_send {"id": "${running.id}", "message": "..."}. The name "${params.name}" also works while unambiguous. Record this id outside this turn — tool details do not survive context compaction. ` +
 										`Do NOT generate or assume any results — you have no idea what the sub-agent will do or produce. ` +
@@ -3096,8 +3153,14 @@ export default function subagentsExtension(
 
 				// "Started" result — tool returned immediately
 				if (details?.status === "started") {
+					const origin =
+						details?.runtimePlan?.modelSource === "agent"
+							? " · agent default"
+							: details?.runtimePlan?.modelSource === "request"
+								? " · parent override"
+								: "";
 					const runtime = details?.model
-						? ` — ${details.model}${details.thinking ? ` · ${details.thinking}` : ""}`
+						? ` — ${details.model}${details.thinking ? ` · ${details.thinking}` : ""}${origin}`
 						: " — started";
 					const worktree = details?.worktree?.branch
 						? ` · ${details.worktree.branch}`

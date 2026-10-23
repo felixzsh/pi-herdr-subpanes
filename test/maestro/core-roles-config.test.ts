@@ -5,7 +5,10 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { discoverAgentCatalog } from "../../maestro/core/roles/discovery.ts";
 import { loadRoleConfig } from "../../maestro/core/config/role-config.ts";
-import { loadModelConfig } from "../../maestro/core/config/model-config.ts";
+import {
+	loadModelConfig,
+	parseModelConfig,
+} from "../../maestro/core/config/model-config.ts";
 import { loadPaneConfig } from "../../maestro/core/config/pane-config.ts";
 import { loadPersistentConfig } from "../../maestro/core/config/persistent-config.ts";
 import { loadSupervisionConfig } from "../../maestro/core/config/supervision-config.ts";
@@ -105,6 +108,42 @@ test("Task17 core discovery consumes the injected role-pack protocol and preserv
 			failed.agents.map((agent) => agent.name),
 			["alpha", "gamma"],
 		);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test("models.enforceAgentDefaults parses as an opt-in boolean pin", () => {
+	assert.deepEqual(parseModelConfig({ models: {} }), { agents: {} });
+	assert.equal(
+		parseModelConfig({ models: { enforceAgentDefaults: true } })
+			.enforceAgentDefaults,
+		true,
+	);
+	assert.equal(
+		parseModelConfig({ models: { enforceAgentDefaults: false } })
+			.enforceAgentDefaults,
+		false,
+	);
+	assert.throws(
+		() => parseModelConfig({ models: { enforceAgentDefaults: "yes" } }),
+		(error: Error) =>
+			error.message.includes("models.enforceAgentDefaults must be a boolean"),
+	);
+	const root = mkdtempSync(join(tmpdir(), "core-model-pin-"));
+	try {
+		const configDir = join(root, "durable-dir");
+		mkdirSync(configDir);
+		writeFileSync(
+			join(configDir, "config.json"),
+			JSON.stringify({
+				models: { agents: { reviewer: "a/b" }, enforceAgentDefaults: true },
+			}),
+		);
+		assert.deepEqual(loadModelConfig(configDir), {
+			agents: { reviewer: "a/b" },
+			enforceAgentDefaults: true,
+		});
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
 	RuntimeResolutionError,
+	assertAgentRuntimePin,
 	buildAuthenticatedModelCatalog,
 	resolveRuntimePlan,
 	resolveRuntimePlans,
@@ -568,6 +569,42 @@ describe("runtime routing", () => {
 		});
 	});
 
+	it("clamps agent-default thinking to the selected model's real levels", () => {
+		const sparse = model("other", "sparse", {
+			thinkingLevelMap: {
+				off: "off",
+				minimal: "minimal",
+				low: "low",
+				medium: null,
+				high: "high",
+			},
+		});
+		const entries = [model("fake", "parent"), sparse];
+		const plan = resolveRuntimePlan(
+			{},
+			{ model: "other/sparse", thinking: "medium" },
+			parent,
+			registry(entries),
+		);
+		assert.equal(plan.thinking, "high");
+		assert.equal(plan.thinkingSource, "agent");
+		assert.deepEqual(plan.thinkingAdjustment, {
+			from: "medium",
+			to: "high",
+			reason: "agent-default-clamp",
+		});
+		assert.throws(
+			() =>
+				resolveRuntimePlan(
+					{ model: "other/sparse", thinking: "medium" },
+					{},
+					parent,
+					registry(entries),
+				),
+			/not supported by "other\/sparse"/,
+		);
+	});
+
 	it("clamps inherited thinking for a non-reasoning selected model", () => {
 		const plain = model("other", "plain", { reasoning: false });
 		const plan = resolveRuntimePlan(
@@ -607,7 +644,7 @@ describe("authenticated model catalog", () => {
 		assert.match(catalog, /non-reasoning/);
 		assert.match(
 			catalog,
-			/explicitly select an exact authenticated provider\/model-id by task tier first/,
+			/omit model and thinking so the child runs the role's configured runtime/,
 		);
 		assert.match(
 			catalog,
@@ -618,9 +655,88 @@ describe("authenticated model catalog", () => {
 			/context-isolated/,
 			"generic catalog must describe context-isolated same-family fallback",
 		);
-		assert.match(
-			catalog,
-			/inherits the parent runtime as a discouraged fallback/,
+		assert.match(catalog, /inherits the parent runtime when nothing else/);
+	});
+
+	it("rejects per-launch overrides when agent defaults are pinned", () => {
+		const pin = { agentName: "reviewer", enforceAgentDefaults: true };
+		assert.throws(
+			() =>
+				resolveRuntimePlans(
+					{ model: "fake/parent", thinking: "high" },
+					{ model: "other/fast", thinking: "medium" },
+					parent,
+					registry(),
+					pin,
+				),
+			/pinned to/,
+		);
+		assert.throws(
+			() =>
+				assertAgentRuntimePin(
+					{ model: "fake/parent" },
+					{ model: "other/fast" },
+					pin,
+				),
+			/pinned to/,
+		);
+		assert.throws(
+			() =>
+				assertAgentRuntimePin(
+					{ thinking: "high" },
+					{ thinking: "medium" },
+					pin,
+				),
+			/pinned to/,
+		);
+	});
+
+	it("allows pinned agent defaults when the launch omits or repeats them", () => {
+		const pin = { agentName: "reviewer", enforceAgentDefaults: true };
+		const plans = resolveRuntimePlans(
+			{},
+			{ model: "other/fast", thinking: "low" },
+			parent,
+			registry(),
+			pin,
+		);
+		assert.equal(plans[0].model, "other/fast");
+		assert.equal(plans[0].modelSource, "agent");
+		assert.equal(plans[0].thinking, "low");
+		assert.equal(plans[0].thinkingSource, "agent");
+		assert.doesNotThrow(() =>
+			assertAgentRuntimePin(
+				{ model: "other/fast" },
+				{ model: "other/fast" },
+				pin,
+			),
+		);
+	});
+
+	it("ignores the pin without enforcement, an agent name, or agent defaults", () => {
+		assert.doesNotThrow(() =>
+			resolveRuntimePlans(
+				{ model: "other/fast" },
+				{ model: "fake/parent" },
+				parent,
+				registry(),
+				{ agentName: "reviewer" },
+			),
+		);
+		assert.doesNotThrow(() =>
+			resolveRuntimePlans(
+				{ model: "other/fast" },
+				{ model: "fake/parent" },
+				parent,
+				registry(),
+				{ enforceAgentDefaults: true },
+			),
+		);
+		assert.doesNotThrow(() =>
+			resolveRuntimePlans({ model: "other/fast" }, {}, parent, registry(), {
+				agentName: "reviewer",
+				enforceAgentDefaults: true,
+			}),
 		);
 	});
 

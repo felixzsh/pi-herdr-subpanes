@@ -67,7 +67,7 @@ export interface ResolvedRuntimePlan {
 	thinkingAdjustment?: {
 		from: ThinkingLevel;
 		to: ThinkingLevel;
-		reason: "non-reasoning" | "inherited-clamp";
+		reason: "non-reasoning" | "inherited-clamp" | "agent-default-clamp";
 	};
 	observed?: {
 		model?: string;
@@ -257,7 +257,7 @@ export function resolveRuntimePlan(
 
 	let thinking = preferredThinking;
 	let thinkingAdjustment: ResolvedRuntimePlan["thinkingAdjustment"];
-	if (thinkingSelection.source !== "parent") {
+	if (thinkingSelection.source === "request") {
 		if (!selectedModel) {
 			throw new RuntimeResolutionError(
 				`model capability information is unavailable; cannot validate explicit thinking ${JSON.stringify(preferredThinking)}`,
@@ -268,6 +268,22 @@ export function resolveRuntimePlan(
 			throw new RuntimeResolutionError(
 				`thinking ${JSON.stringify(preferredThinking)} is not supported by ${JSON.stringify(`${provider}/${modelId}`)}; supported: ${formatSupported(selectedModel, registry)}`,
 			);
+		}
+	} else if (thinkingSelection.source === "agent") {
+		if (!selectedModel) {
+			throw new RuntimeResolutionError(
+				`model capability information is unavailable; cannot validate ` +
+					`agent thinking ${JSON.stringify(preferredThinking)}`,
+			);
+		}
+		const supported = registry.supportedThinkingLevels(selectedModel);
+		if (!supported.includes(preferredThinking)) {
+			thinking = registry.clampThinkingLevel(selectedModel, preferredThinking);
+			thinkingAdjustment = {
+				from: preferredThinking,
+				to: thinking,
+				reason: "agent-default-clamp",
+			};
 		}
 	} else if (selectedModel) {
 		thinking = registry.clampThinkingLevel(selectedModel, preferredThinking);
@@ -294,13 +310,53 @@ export function resolveRuntimePlan(
 	return plan;
 }
 
+export interface AgentRuntimePin {
+	/** Role name the launch resolves, when it resolves one. */
+	agentName?: string;
+	/**
+	 * When true, a named agent with a configured model/thinking rejects a
+	 * per-launch override so orchestrators cannot invent runtimes.
+	 */
+	enforceAgentDefaults?: boolean;
+}
+
+export function assertAgentRuntimePin(
+	request: RuntimeRequest,
+	agentDefaults: RuntimeRequest,
+	pin: AgentRuntimePin = {},
+): void {
+	if (!pin.enforceAgentDefaults || !pin.agentName) return;
+	const agentModel = agentDefaults.model?.trim();
+	const requestModel = request.model?.trim();
+	if (agentModel && requestModel && requestModel !== agentModel) {
+		throw new RuntimeResolutionError(
+			`model for agent ${JSON.stringify(pin.agentName)} is pinned to ` +
+				`${JSON.stringify(agentModel)} by the role or models.agents config ` +
+				`(models.enforceAgentDefaults); omit model to use it instead of ` +
+				`overriding per launch`,
+		);
+	}
+	const agentThinking = agentDefaults.thinking?.trim();
+	const requestThinking = request.thinking?.trim();
+	if (agentThinking && requestThinking && requestThinking !== agentThinking) {
+		throw new RuntimeResolutionError(
+			`thinking for agent ${JSON.stringify(pin.agentName)} is pinned to ` +
+				`${JSON.stringify(agentThinking)} by the role ` +
+				`(models.enforceAgentDefaults); omit thinking to use it instead ` +
+				`of overriding per launch`,
+		);
+	}
+}
+
 /** Resolve every configured fallback before launching the first child. */
 export function resolveRuntimePlans(
 	request: RuntimeRequest,
 	agentDefaults: RuntimeRequest,
 	parent: ParentRuntime,
 	registry: ModelRegistryAdapter,
+	pin: AgentRuntimePin = {},
 ): ResolvedRuntimePlan[] {
+	assertAgentRuntimePin(request, agentDefaults, pin);
 	const selection = selectField(request.model, agentDefaults.model);
 	if (!selection.value)
 		return [resolveRuntimePlan(request, agentDefaults, parent, registry)];
@@ -368,13 +424,15 @@ export function buildAuthenticatedModelCatalog(
 		);
 	}
 	lines.push(
-		"For orchestrated children, explicitly select an exact authenticated provider/model-id by task tier first (fast for bounded mechanical work and recon, mid for implementation and review, frontier for architecture, security, hard diagnosis, or adversarial review), then set supported thinking.",
+		"For named agents, omit model and thinking so the child runs the role's " +
+			"configured runtime. Only set them explicitly for bare spawns or a " +
+			"justified per-launch override; never invent a model id.",
 	);
 	lines.push(
 		"For ordinary review, prefer a different authenticated model family. Use an exact authenticated provider/model-id from the catalog when the authoring family is known. When no other authenticated model family is available, ordinary review may use a same-family reviewer in a fresh standalone session. Disclose that this review is context-isolated, not cross-family independent. Cross-family verification must not use this fallback.",
 	);
 	lines.push(
-		"Omitting model and thinking inherits the parent runtime as a discouraged fallback.",
+		"Omitting both still inherits the parent runtime when nothing else configures one.",
 	);
 	return lines.join("\n");
 }

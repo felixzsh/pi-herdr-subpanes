@@ -3979,11 +3979,15 @@ describe("shared subagent configuration path", () => {
 		}
 	});
 
-	it("keeps the packaged example strict JSON with only default and agents", () => {
+	it("keeps the packaged example strict JSON with agents and the opt-in pin", () => {
 		const example = JSON.parse(
 			readFileSync(getSubagentsConfigExamplePath(), "utf8"),
 		);
-		assert.deepEqual(Object.keys(example.models).sort(), ["agents"]);
+		assert.deepEqual(Object.keys(example.models).sort(), [
+			"agents",
+			"enforceAgentDefaults",
+		]);
+		assert.equal(example.models.enforceAgentDefaults, false);
 	});
 
 	it("ignores a decoy package-root config.json in every reader", () => {
@@ -8389,7 +8393,7 @@ describe("tool registration", () => {
 		assert.match(subagent.promptGuidelines.join("\n"), /fake\/fast/);
 		assert.match(
 			subagent.promptGuidelines.join("\n"),
-			/explicitly set both model and thinking for every child/,
+			/omit model and thinking so the child runs the role's configured runtime/,
 		);
 		assert.match(
 			subagent.promptGuidelines.join("\n"),
@@ -8402,7 +8406,7 @@ describe("tool registration", () => {
 		);
 		assert.match(
 			subagent.promptGuidelines.join("\n"),
-			/Omitting model and thinking still inherits the parent runtime, but this is a discouraged fallback/,
+			/models\.enforceAgentDefaults, a per-launch model or thinking/,
 		);
 		assert.match(subagent.promptGuidelines.join("\n"), /login-test2/);
 	});
@@ -8452,7 +8456,7 @@ describe("tool registration", () => {
 			if (label === "generic") {
 				const orchestratedLine = catalog
 					.split("\n")
-					.find((line) => line.startsWith("For orchestrated children"));
+					.find((line) => line.startsWith("For named agents"));
 				assert.ok(orchestratedLine);
 				assert.doesNotMatch(
 					orchestratedLine,
@@ -8484,7 +8488,10 @@ describe("tool registration", () => {
 		const generic = subagentsModule.__test__
 			.buildSubagentRoutingGuidelines("catalog")
 			.join("\n");
-		assert.match(generic, /first choose a fast, mid, or frontier/);
+		assert.match(
+			generic,
+			/omit model and thinking so the child runs the role's/,
+		);
 		assert.doesNotMatch(generic, /task-category shortlists/);
 	});
 

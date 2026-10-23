@@ -3,7 +3,8 @@
     "enabled": true
   },
   "models": {
-    "agents": {}
+    "agents": {},
+    "enforceAgentDefaults": false
   },
   "persistent": {
     "maxAgents": 3

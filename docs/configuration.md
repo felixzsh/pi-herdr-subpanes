@@ -15,7 +15,8 @@ Create it by copying the installed package's `config.json.example`.
     "enabled": true
   },
   "models": {
-    "agents": {}
+    "agents": {},
+    "enforceAgentDefaults": false
   },
   "persistent": {
     "maxAgents": 3
@@ -274,9 +275,11 @@ Delivery contract:
 
 `models.default` sets the model for subagents that do not specify a model.
 `models.agents` sets per-agent defaults, keyed by the agent name passed to
-`subagent({ agent: ... })`. Explicit `model` tool arguments take precedence,
-followed by agent frontmatter, per-agent config, the global default, and finally
-the parent model. Model values must be exact authenticated `provider/model-id`
+`subagent({ agent: ... })`. For named agents, omit `model` and `thinking` so
+the child uses its configured runtime. Explicit `model`/`thinking` tool
+arguments take precedence, followed by agent frontmatter, per-agent config,
+the global default, and finally the parent model. Orchestrators should not
+invent model ids per launch; resolve the named role and omit both fields. Model values must be exact authenticated `provider/model-id`
 references. A value can contain an ordered comma-separated fallback list, for
 example `provider/preferred, provider/fallback`. The extension validates every
 candidate before launch, then launches later candidates only after the selected
@@ -293,6 +296,13 @@ that candidate fails without launching. A completed child result, including a
 negative task result, never switches models. Completion metadata reports the
 requested candidate, every attempted candidate, the model actually used, and
 each raw model failure in attempt order when fallbacks are tried.
+
+Set `models.enforceAgentDefaults` to `true` to reject a per-launch `model`
+or `thinking` that contradicts a named agent's configured runtime (role
+frontmatter or `models.agents`). The launch fails before Herdr creates a
+pane or worktree, naming the pinned value and telling the caller to omit
+the field. Bare spawns (no `agent`) are unaffected, and identical values
+pass through. It defaults to `false` for backward compatibility.
 
 A catalog-listed model and configured authentication do not prove that the
 active provider account can use that model. Providers may reject an account /

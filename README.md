@@ -158,7 +158,7 @@ Set each child's exact authenticated `provider/model-id` and a supported thinkin
 - mid for ordinary implementation or review
 - frontier for architecture, security, hard diagnosis, or adversarial review
 
-Then set thinking within that model's range. Without `model`, a child uses agent frontmatter, then `models.agents.<name>`, then `models.default`, then the parent model. Without `thinking`, it uses the role's thinking level when set, otherwise the parent level.
+Then set thinking within that model's range. For named agents, omit `model` and `thinking` so the child uses its configured runtime: agent frontmatter, then `models.agents.<name>`, then `models.default`, then the parent model. Without `thinking`, it uses the role's thinking level when set, otherwise the parent level. Only set them per launch for bare spawns or a justified override; never invent a model id. Set `models.enforceAgentDefaults` to `true` to reject overrides that contradict a named agent's configured runtime.
 
 A `model` value can also be an ordered fallback list, such as `provider/preferred, provider/fallback`.
 

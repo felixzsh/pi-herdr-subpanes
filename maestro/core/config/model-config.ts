@@ -1,10 +1,16 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { isPlainObject, isString } from "./type-guards.ts";
+import { isBoolean, isPlainObject, isString } from "./type-guards.ts";
 
 export interface ModelConfig {
 	default?: string;
 	agents: Record<string, string>;
+	/**
+	 * When true, a named agent with a configured model/thinking (role
+	 * frontmatter or models.agents) rejects a per-launch model/thinking
+	 * override. Omit model/thinking to use the agent default.
+	 */
+	enforceAgentDefaults?: boolean;
 }
 
 function invalidModelConfig(source: string, message: string): never {
@@ -21,7 +27,7 @@ export function parseModelConfig(
 	if (models == null) return { agents: {} };
 	if (!isPlainObject(models))
 		invalidModelConfig(source, "models must be an object");
-	const allowedKeys = new Set(["default", "agents"]);
+	const allowedKeys = new Set(["default", "agents", "enforceAgentDefaults"]);
 	const unsupportedKeys = Object.keys(models).filter(
 		(key) => !allowedKeys.has(key),
 	);
@@ -58,6 +64,14 @@ export function parseModelConfig(
 	}
 	const config: ModelConfig = { agents };
 	if (defaultModel) config.default = defaultModel;
+	if (models.enforceAgentDefaults != null) {
+		if (!isBoolean(models.enforceAgentDefaults))
+			invalidModelConfig(
+				source,
+				"models.enforceAgentDefaults must be a boolean",
+			);
+		config.enforceAgentDefaults = models.enforceAgentDefaults;
+	}
 	return config;
 }
 
