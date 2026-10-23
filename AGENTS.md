@@ -110,6 +110,17 @@ git diff --check
 
 `npm run lint` needs Node.js 22.18+ (or 22.6–22.17 with `NODE_OPTIONS=--experimental-strip-types`) because oxlint imports `oxlint.config.ts` and its `tools/oxlint/anti-slop/index.ts` plugin as TypeScript.
 
+Focused tests may run inside a worktree only through
+`tools/worktree-resolve.mjs`, which resolves the main checkout's `node_modules`
+without linking or writing anything into the checkout:
+
+```bash
+node --experimental-strip-types \
+  --import "$PWD/tools/worktree-resolve.mjs" --test test/maestro/example.test.ts
+```
+
+The full suite still runs only in the main repository.
+
 Run LSP diagnostics on every changed TypeScript file; lint and tests do not catch every TypeScript error.
 
 For Herdr or lifecycle changes, run the deterministic suite from inside Herdr. Run only one integration suite at a time on a Herdr instance; concurrent suites compete for terminal focus and process capacity and can cause false timeouts or leaked test resources.

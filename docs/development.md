@@ -81,4 +81,22 @@ PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 \
   npm run test:integration:live
 ```
 
+## Focused tests inside a worktree
+
+A Herdr-managed worktree is a fresh checkout with no `node_modules`, and ESM
+resolves bare specifiers from the importing file, so a focused test file fails
+before any test runs. Register the resolver hook instead of linking
+`node_modules` into the checkout:
+
+```bash
+node --experimental-strip-types \
+  --import "$(git rev-parse --show-toplevel)/tools/worktree-resolve.mjs" \
+  --test test/maestro/example.test.ts
+```
+
+The hook falls back to the main checkout's `node_modules`, located through the
+shared Git common directory. It writes nothing into the worktree, so the tree
+stays clean for review. Worktrees still never run the full suite; the parent
+runs the gate in the main checkout.
+
 See [RELEASING.md](../RELEASING.md) for versioning, trusted publication, and release verification.
