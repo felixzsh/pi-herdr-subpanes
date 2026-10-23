@@ -104,11 +104,18 @@ For normal changes:
 npm test
 npm run format:check
 npm run lint
+npm run check:imports
 npm pack --dry-run
 git diff --check
 ```
 
 `npm run lint` needs Node.js 22.18+ (or 22.6–22.17 with `NODE_OPTIONS=--experimental-strip-types`) because oxlint imports `oxlint.config.ts` and its `tools/oxlint/anti-slop/index.ts` plugin as TypeScript.
+
+`npm run check:imports` is a static import check: run it in the worktree
+after renaming or removing an export (through
+`tools/worktree-resolve.mjs`, since the script itself imports `typescript`)
+— it reports the file and line of every named import that no longer resolves,
+which the suite would only reveal to the parent one round later.
 
 Focused tests may run inside a worktree only through
 `tools/worktree-resolve.mjs`, which resolves the main checkout's `node_modules`

@@ -81,6 +81,15 @@ PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 \
   npm run test:integration:live
 ```
 
+## Static import check
+
+`npm run check:imports` parses every `.ts` file under `maestro/`, `pi-extension/`,
+`test/` and `tools/`, resolves each relative named import, and reports names the
+target module does not export. It only needs `typescript` resolvable, so in a
+worktree run it through the resolver hook below — the suite cannot run there at
+all, and that is the point: a renamed export would otherwise surface only when
+the parent runs the gate.
+
 ## Focused tests inside a worktree
 
 A Herdr-managed worktree is a fresh checkout with no `node_modules`, and ESM
