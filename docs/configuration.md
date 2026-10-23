@@ -1,14 +1,13 @@
 # Configuration
 
-This page is the reference for the durable `config.json` settings, task-model preferences, and the events other extensions use during `/subagents-init`. For a short introduction, see [Choose models](../README.md#choose-models) in the README.
+This page is the reference for the durable `config.json` settings and model preferences. For a short introduction, see [Choose models](../README.md#choose-models) in the README.
 
 ## Configuration file
 
 The durable user configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`,
 defaulting to `~/.pi/agent/herdr-agents/config.json`. It is not read from the
 installed package root, so npm and git package upgrades do not overwrite it.
-Create it by copying the installed package's `config.json.example`, or run
-`/subagents-init` to seed and draft model task preferences.
+Create it by copying the installed package's `config.json.example`.
 
 ```json
 {
@@ -39,7 +38,9 @@ Model routing does not read the example: no model overrides apply until a real
 
 `config.json` is durable user state under the Pi agent directory and is loaded
 when the extension starts. Run `/reload` after changing it. Package-root
-`config.json` files are ignored; move them manually or re-run `/subagents-init`.
+`config.json` files are ignored; move them manually. A key that this extension
+does not know is a configuration error, so a stale or misspelled section is
+reported instead of silently ignored.
 
 ## Model preferences
 
@@ -54,162 +55,22 @@ exact IDs from your authenticated model catalog:
     "agents": {
       "scout": "your-provider/your-fast-model",
       "reviewer": "your-provider/your-review-model"
-    },
-    "tasks": {
-      "coding": ["your-provider/your-coding-model"],
-      "review": ["your-provider/your-review-model"],
-      "recon": ["your-provider/your-fast-model"],
-      "qa": ["your-provider/your-qa-model"],
-      "architecture": ["your-provider/your-architecture-model"],
-      "docs": ["your-provider/your-docs-model"]
-    },
-    "tasksMeta": {
-      "generatedAt": "2026-09-17T00:00:00Z",
-      "method": "research"
     }
   }
 }
 ```
 
-`models.tasks` candidates are ordered exact authenticated IDs. Use
-`task:<category>` only in the `subagent` tool's `model` argument; it is not
-valid in frontmatter or model defaults. Cross-family independent review requires
-a reviewer from a different model family than the author. For ordinary review,
-prefer a different authenticated model family. When no other authenticated
-model family is available, ordinary review may use a same-family reviewer in a
-fresh standalone session. Disclose that this review is context-isolated, not
-cross-family independent. Cross-family verification must not use this fallback.
-Use an exact authenticated
-shortlist `provider/model-id` when the
-authoring family is known; `task:review` does not establish independence. Family
-is the independence boundary; project policy may separately require a different
+Each role `.md` can pin its own `model` and `thinking` in frontmatter, so a role
+name is usually the only selector you need. `models.agents` covers the same
+choice from configuration, and `models.default` covers children with no model
+anywhere else. Cross-family independent review requires a reviewer from a
+different model family than the author. For ordinary review, prefer a different
+authenticated model family. When no other authenticated model family is
+available, ordinary review may use a same-family reviewer in a fresh standalone
+session. Disclose that this review is context-isolated, not cross-family
+independent. Cross-family verification must not use this fallback. Family is the
+independence boundary; project policy may separately require a different
 provider. This is guidance, not extension enforcement.
-
-## Draft task-model preferences
-
-Run `/subagents-init [preferences]` to draft task-model preferences. For example:
-
-```text
-/subagents-init Prefer capability over price for implementation; keep recon inexpensive
-```
-
-The command supplies a sanitized snapshot of **all available models from the
-active session registry**, including extension-registered providers, exact IDs,
-display names, reported base token costs, context/output limits, input
-modalities, reasoning, and supported thinking levels. Safe extension-registration and auth-source
-metadata is included when Pi exposes it; credentials, endpoints, and raw auth
-labels are not. Configured authentication does not prove account access or a
-successful request. Missing costs remain unknown; reported zero does not mean
-free, and OAuth does not establish subscription billing. The brief uses compact
-JSON without truncating models and reports its model count and JSON character
-count (not a token estimate); large catalogs still consume context. This is the
-current synchronous snapshot: a dynamic provider whose initial catalog refresh
-has not completed might be absent. Init does not refresh providers or probe the
-network for availability. The brief also includes `configRevision`, the
-revision of the exact config bytes that supplied the saved preferences. Init
-does not start while a turn runs or messages are queued, and an empty registry
-ends with a notice instead of a prompt. Neither case writes anything.
-
-The draft considers current saved task, default, and per-agent preferences.
-Optional command arguments set ranking preferences. Otherwise it favors
-capability for substantive work and efficiency for bounded reconnaissance and
-test execution. Categories describe work, not complexity tiers:
-
-| Category | Work |
-| --- | --- |
-| `coding` | Implementation workers |
-| `review` | Code reviewers |
-| `recon` | Reconnaissance scouts |
-| `qa` | Software and test runners |
-| `architecture` | Planning and diagnosis |
-| `docs` | Documentation workers |
-
-Init asks the agent to research major candidates across providers using primary
-sources, disclose uncertainty and notable exclusions, and avoid duplicate
-upstream models across routes unless deliberate redundancy is explained. Display
-names help identify candidates but, like aliases, do not prove upstream
-equivalence; research is still required. Price or context size alone is not
-quality evidence. No live model probes run.
-
-The proposal carries a ranking `basis`. It is `{"kind":"registry-only"}` when
-search is unavailable or yields no usable evidence. It is `{"kind":"research"}`
-only with the http(s) `sources` consulted in this run, the `influence` each had
-on the ranking, and the remaining `uncertainty`. Code checks the basis's shape,
-not whether a source was read, so the basis is labeled as submitted and
-unverified.
-
-While init runs, it emits `pi-herdr-subagents:task-models:init:approval:v1`.
-With no offer, the prompt directs the model to `subagents_write_task_models`
-with `expectedConfigRevision`. When exactly one loaded extension offers, init
-opens that extension's flow, and the extension's instructions replace the
-writer instruction; the extension then owns approval and the write. Two or more
-offers, or an invalid one, stop init before any extension opens or a prompt is
-sent. Once an offer is recorded, a refusal or failure also stops init: it never
-falls back to the direct writer. See [Task-model init events](#task-model-init-events).
-
-## Task-model writer
-
-The writer validates and atomically replaces `models.tasks` and `tasksMeta`,
-preserving unrelated settings. Its tool schema accepts partial nonempty
-categories (omitted categories are removed), rejects empty `tasks: {}` input,
-and rejects exact duplicate refs within a category after trimming;
-IDs remain case-sensitive. Its result includes normalized saved `tasks`,
-`tasksMeta`, `configPath`, `missingCategories`, and `configRevision`. Init requests all six categories
-and a before/after table based on that saved result, not the unsaved draft, and
-must explain missing categories or changed choices.
-
-Optional `basis` must have the same kind as `tasksMeta.method`. A research basis
-needs at least one source with an http(s) URL that has a host and a nonblank
-`influence`, plus a nonblank `uncertainty`. The writer validates it before
-writing, returns it in the result, and never saves it; only `tasksMeta.method`
-persists. Calls without `basis`, including research calls, keep the earlier
-contract.
-
-Optional `expectedConfigRevision` makes a write conditional on the config the
-proposal was read from. A revision is `sha256:` followed by 64 lowercase hex
-digits of the SHA-256 of the exact `config.json` bytes (not normalized JSON or
-only `models.tasks`), or the literal `missing` when the file is absent. Any byte
-change, including whitespace or unrelated settings, makes the revision stale; a
-`missing` revision rejects a file that now exists, and an existing revision
-rejects a file that was removed. A stale revision fails with `Stale task model
-config revision` without replacing configuration: re-read, re-propose, and
-re-approve rather than retrying. Malformed revisions, including `null` and empty
-strings, fail closed. Omitting the field keeps the unconditional write. A write
-to a missing file still seeds from the packaged `config.json.example`.
-`configRevision` is the revision of the exact bytes written and can serve as the
-next precondition.
-
-Every writer call, conditional or not, holds an exclusive `config.json.lock`
-sibling while it reads one snapshot, checks the revision, and atomically renames
-a private temporary file into place. A held lock fails immediately with `Task
-model config writer busy`; there are no waits or retries. The lock is never
-broken automatically: after a crash, the error names the recorded owner and
-reports when that process is no longer running, and you remove the lock only
-after confirming that no writer is active. Each call removes only its own lock
-and temporary file. This lock is advisory: it serializes cooperating writers
-but cannot constrain a text editor or another process that ignores it. The
-revision check detects changes made before the snapshot is read; it is not a
-filesystem transaction against arbitrary external writers.
-
-## Task routing
-
-`task:<category>` values select subagent models; they are not slash commands and
-do not change the parent model. Ordered authenticated candidate plans resolve
-before launch. Ordinary nonpersistent runs can retry later candidates after
-launch failure or after a running child settles with a provider/agent error,
-not after a completed negative task result. Persistent specialists do not
-advance after a running-child error. This is not per-step routing; worktrees
-use the first authenticated candidate only, without fallback retries.
-Shortlists do not enforce reviewer independence. Cross-family independent
-review requires a reviewer from a different model family than the author. For
-ordinary review, prefer a different authenticated model family. When no other
-authenticated model family is available, ordinary review may use a same-family
-reviewer in a fresh standalone session. Disclose that this review is
-context-isolated, not cross-family independent. Cross-family verification
-must not use this fallback. Another route to the same family is not
-independent review. Family is the independence boundary; project policy may
-separately require a different provider. Run `/reload` (or start a new session)
-after writing preferences.
 
 ## Persistent specialist limit
 
@@ -224,82 +85,6 @@ load naming the file and asking you to remove the key. The extension never
 rewrites the file. Other values remain configuration errors, as do unknown keys
 under `roles`. Registered role packs are the entire package layer, and global and
 project definitions keep their precedence over them.
-
-## Task-model init events
-
-Two versioned `pi.events` channels let another extension take part in
-`/subagents-init` without importing this package. Both carry the invoking
-command's live `ExtensionCommandContext`, so they are for trusted extensions in
-the same process. The context is current only while the event is emitted.
-
-The host emits `pi-herdr-subagents:task-models:init:approval:v1` while init
-runs:
-
-```typescript
-type ApprovalRequest = {
-  apiVersion: 1;
-  brief: TaskModelBrief; // frozen: operatorPreferences, categories, configRevision, current, models (never empty)
-  context: ExtensionCommandContext;
-  offer(offer: { owner: string; open(): OpenResult }): "recorded" | "closed";
-};
-type OpenResult =
-  | {
-      kind: "ready";
-      destination: { toolName: string; instructions: string };
-      cancel(): void; // closes the flow this open created
-    }
-  | { kind: "blocked"; reason: string };
-```
-
-- Call `offer` synchronously, before the listener's first `await`. After `emit`
-  returns, `offer` answers `"closed"` and records nothing.
-- Offer whenever your extension owns task-model approval, even when it is busy,
-  and refuse from `open`. `owner` is one printable token without spaces.
-- The host opens nothing until collection ends. Two offers (even with the same
-  owner) or an invalid offer stop init. With one offer, the host calls `open()`
-  once, and it must return synchronously.
-- `ready` must leave `toolName` active. Its `instructions` replace the host's
-  writer instruction in the prompt the host sends.
-- `ready` must include `cancel`. When the host does not hand the prompt to Pi
-  (the tool is inactive, or `pi.sendUserMessage` throws), it calls `cancel()`
-  once before reporting `not-started`. `cancel` must close only the flow that
-  this `open` created, never a later one. A `cancel` that throws is reported
-  with the outcome.
-- A throw, a promise, an invalid result (including a missing `cancel`), or
-  `blocked` stops init with a notice and no prompt. The host cannot undo what
-  `open` changed before failing.
-- Pi accepts the prompt asynchronously. It can still reject it after `start`
-  reports `started`, for example when the selected model has no configured
-  auth; the host refuses up front only when no model is selected. Pi delivers
-  the prompt to `input` handlers (source `"extension"`) before that check and
-  emits `before_agent_start` and `agent_start` only after it passes. An
-  extension whose flow outlives one prompt should close it when other input or
-  a run arrives before those events, so a later request cannot inherit it.
-- Pi's event bus logs and swallows listener exceptions. A listener that throws
-  before offering looks the same as no listener, so init uses the direct
-  writer. An extension that guards the writer still refuses that write.
-
-Another extension's command emits `pi-herdr-subagents:task-models:init:start:v1`
-to start the same init:
-
-```typescript
-type StartRequest = {
-  apiVersion: 1;
-  context: ExtensionCommandContext;
-  preferences: string; // ranking preferences, passed through as typed
-  offer(offer: { owner: string; start(): InitOutcome }): "recorded" | "closed";
-};
-type InitOutcome =
-  | { kind: "started"; destination: string }
-  | { kind: "not-started"; reason: string };
-```
-
-The host offers synchronously as `pi-herdr-agents` and starts nothing until the
-emitter calls `start()`. Call it only when exactly one host offered. `start`
-runs init with the request's context and returns synchronously; the emitter
-shows a `not-started` reason. The host does not listen in subagent sessions
-and unsubscribes at `session_shutdown`. Unsubscribe an approval listener there
-too, as the role-pack bridge does.
 
 ## Sidebar markers
 
@@ -432,9 +217,7 @@ Run `/reload` after changing role, model, or pane settings.
 followed by agent frontmatter, per-agent config, the global default, and finally
 the parent model. Model values must be exact authenticated `provider/model-id`
 references. A value can contain an ordered comma-separated fallback list, for
-example `provider/preferred, provider/fallback`. The tool argument also accepts
-`task:<category>` as its complete value (not in a list), for configured
-`coding`, `review`, `recon`, `qa`, `architecture`, or `docs` preferences. The extension validates every
+example `provider/preferred, provider/fallback`. The extension validates every
 candidate before launch, then launches later candidates only after the selected
 child settles with a provider/agent error. Pi owns any automatic transient
 retrying inside that child; the extension does not infer retry counts or

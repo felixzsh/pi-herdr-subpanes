@@ -220,42 +220,20 @@ untracked files on its retained branch before rechecking removal eligibility.
 Ignored files are not captured. Commit failure restores the original index.
 _Avoid_: Implicit commit, stash, discard
 
-**Task-category model preference**:
-An ordered authenticated model shortlist in `models.tasks` for `coding`,
-`review`, `recon`, `qa`, `architecture`, or `docs`. Recon maps to scouts,
-architecture to planning and diagnosis, coding to workers, review to reviewers,
-QA to software and test runners, and docs to documentation workers. Categories
-describe work, not complexity. `/subagents-init [preferences]` drafts them from
-the active extension-loaded registry's synchronous snapshot and existing saved
-choices, with source-based research when available. A single loaded extension
-that offers on the task-model init approval event owns approval and the write
-instead of the host writer. A dynamic provider awaiting
-its initial catalog refresh might be absent. `task:<category>` is a subagent
-model selector, not a command or parent model change. Ordered authenticated
-candidate plans resolve before launch; ordinary nonpersistent runs can retry
-after launch failure or a running child's provider/agent error, not a completed
-negative task result. Persistent specialists do not advance after a running-child
-error. Worktrees select the first authenticated candidate only, without fallback
-retries. Cross-family independent review requires a reviewer from a different
-model family than the author. For ordinary review, prefer a different
-authenticated model family. When no other authenticated model family is
-available, ordinary review may use a same-family reviewer in a fresh standalone
-session. Disclose that this review is context-isolated, not cross-family
-independent. Cross-family verification must not use this fallback. Family is
-the independence boundary; project policy may separately require a
-different provider.
+**Independent review**:
+Cross-family independent review requires a reviewer from a different model
+family than the author. For ordinary review, prefer a different authenticated
+model family. When no other authenticated model family is available, ordinary
+review may use a same-family reviewer in a fresh standalone session. Disclose
+that this review is context-isolated, not cross-family independent. Cross-family
+verification must not use this fallback. Family is the independence boundary;
+project policy may separately require a different provider. A `models.agents`
+entry or a role's `model` frontmatter selects a model but never establishes
+independence.
 _Avoid_: Generic tier, reviewer-family enforcement, per-step routing
-
-**Ranking basis**:
-What a task-model proposal's ranking rests on, as the proposing model submitted
-it: `registry-only`, or `research` with the http(s) sources consulted in that
-run, how each influenced the ranking, and the remaining uncertainty. It travels
-with one write for review and is never saved; `tasksMeta.method` keeps its kind.
-Code checks its shape, not that a source was read.
-_Avoid_: Verified research, evidence store
 
 **Loop template**:
 A future reusable orchestration definition beside `models`, describing stages,
-task categories, and a termination/report contract. Loop templates are not
-implemented by task-model routing.
+roles, and a termination/report contract. Loop templates are not implemented by
+this extension.
 _Avoid_: Current executable workflow

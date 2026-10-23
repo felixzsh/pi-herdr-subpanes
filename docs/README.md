@@ -10,7 +10,7 @@ are evidence, not shipped contracts, when a later ADR supersedes them.
 - [`tools.md`](tools.md) — public tools, commands, parameters, and run
   lifecycle.
 - [`configuration.md`](configuration.md) — `config.json`, model preferences,
-  task-model init events, sidebar markers, supervision, and pane placement.
+  sidebar markers, supervision, and pane placement.
 - [`roles.md`](roles.md) — role discovery, authoring, tool access control, and
   role packs.
 - [`troubleshooting.md`](troubleshooting.md) — completion delivery and other

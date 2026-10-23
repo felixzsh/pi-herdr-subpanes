@@ -12,8 +12,6 @@ export type {
 	RuntimeCandidate,
 } from "./run-session.ts";
 export { defaultRetainSurface } from "./surface-retention.ts";
-export { startTaskModelInit } from "./task-model-init.ts";
-export type { TaskModelInitOutcome } from "./task-model-init.ts";
 export {
 	createDefaultRunSession,
 	observePiActivity,

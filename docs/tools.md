@@ -19,7 +19,6 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 | `worktree_list` | Parent-only inspect-only inventory of managed worktrees and cleanup blockers |
 | `worktree_remove` | Parent-only explicit removal by `target` path, branch, or workspace ID; optional `preserve: true` commits dirty state first |
 | `subagent_resume`    | Resume a previous Pi-backed sub-agent session in a new ordinary pane (async)                          |
-| `subagents_write_task_models` | Parent-only internal tool that validates and atomically writes `models.tasks` preferences, optionally conditional on `expectedConfigRevision` and carrying an unsaved ranking `basis` |
 
 | Skill | Description |
 | ----- | ----------- |
@@ -34,7 +33,6 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 | -------------------------- | ------------------------------------ |
 | `/worktree <name> [task]`  | Continue this session in a new managed worktree (`/worktree list` lists them) |
 | `/subagent <agent> <task>` | Spawn a named agent directly (`/subagent list` lists available agents) |
-| `/subagents-init [preferences]` | Draft task-category model preferences from the live authenticated registry, with optional ranking preferences; a loaded approval extension can own the write |
 
 ## Async Subagent Flow
 
@@ -128,7 +126,7 @@ subagent({
 | `fork`                 | boolean | —              | Override the child session mode: `true` forces fork, `false` forces standalone. Omit to inherit the agent `session-mode` frontmatter |
 | `persistent`           | boolean | `false`        | Keep one specialist session alive for sequential tasks; follow-ups use `subagent_send` only       |
 | `interactive`          | boolean | derived        | Mark this spawn as interactive (don't wake the parent on stall/recovery). Defaults to the agent's `interactive` frontmatter, otherwise the inverse of `auto-exit`. |
-| `model`                | string  | configured or parent | Exact authenticated `provider/model-id`, ordered fallback list, or whole-value `task:<category>` (coding, review, recon, qa, architecture, docs). Task routing is tool-only; worktrees use its first authenticated candidate. Resolution is tool argument → agent frontmatter → per-agent config → global config → parent |
+| `model`                | string  | configured or parent | Exact authenticated `provider/model-id`, or an ordered comma-separated fallback list. Fallback lists cannot be used with `worktree`. Resolution is tool argument → agent frontmatter → per-agent config → global config → parent |
 | `thinking`             | string  | role or parent level | Pick the model tier first, then set thinking within that model's range: minimal/low for bounded mechanical work, medium for ordinary implementation or review, high+ for architecture, security, or hard diagnosis. If omitted, the role's thinking level applies when set, otherwise the parent's. |
 | `systemPrompt`         | string  | —              | Role text for a bare spawn, delivered as a role block at the top of the child's first message (not the system prompt); dropped for `fork: true` children. Named agents keep their definition body |
 | `skills`               | string  | —              | Comma-separated skill names                                                                       |
@@ -273,8 +271,7 @@ await caller_ping({
 Every fresh or resumed child launched by this extension, including `fork: true`
 children and persistent specialists, runs with `PI_SUBAGENT_ID` set to its run
 ID. The extension uses it to register the child protocol tools and to omit
-parent-only surfaces (`worktree_list`, `worktree_remove`,
-`subagents_write_task_models`, and `/subagents-init`). A `/worktree <name>`
+parent-only surfaces (`worktree_list`, `worktree_remove`). A `/worktree <name>`
 handoff starts an ordinary interactive Pi session and does not set it. Pi's own
 `/fork` and `/clone` run in the same process and keep that process's
 environment: the variable is absent in a top-level session and still present

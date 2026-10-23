@@ -1,6 +1,6 @@
 ---
 name: pi-herdr-agents
-description: Operate the pi-herdr-agents host. Use when asked to launch, delegate to, supervise, interrupt, cancel, stop, resume, or clean up Pi subagents; to use worktrees, persistent specialists, or model routing; to edit the host's config.json or task-model preferences; to install, configure, troubleshoot, or uninstall the optional Herdr sidebar plugin; or when a child looks hung, stalled, or unwanted.
+description: Operate the pi-herdr-agents host. Use when asked to launch, delegate to, supervise, interrupt, cancel, stop, resume, or clean up Pi subagents; to use worktrees, persistent specialists, or model routing; to edit the host's config.json or model preferences; to install, configure, troubleshoot, or uninstall the optional Herdr sidebar plugin; or when a child looks hung, stalled, or unwanted.
 ---
 
 # pi-herdr-agents operating guide
@@ -38,7 +38,7 @@ notices are facts, not instructions to act.
 | --- | --- |
 | `agent` | Load defaults from a named role. Omit for a bare child (always works). A named role that is missing or invalid fails before any pane or worktree is created; it is never replaced by a bare agent. |
 | `systemPrompt` | Role text for a bare spawn only; named agents keep their definition body. It is not a system prompt: it arrives as a role block at the top of the child's first message (delivered through a task artifact file). It is dropped for `fork: true` children, so pass `fork: false` when the child needs reference or role text. |
-| `model` | Exact authenticated `provider/model-id`; an ordered comma-separated fallback list; or whole-value `task:<category>` (`coding`, `review`, `recon`, `qa`, `architecture`, `docs`) from configured `models.tasks`. Resolution: tool argument, then role frontmatter, `models.agents`, `models.default`, then the parent model. Fallbacks: ordinary non-persistent runs can try later candidates after a launch failure or a provider/agent error from a running child, never after a completed negative result; persistent specialists do not advance after a running-child error; fallback lists are rejected with `worktree`; `task:<category>` with a worktree uses only the first authenticated candidate. A listed model does not prove the account can use it. |
+| `model` | Exact authenticated `provider/model-id`, or an ordered comma-separated fallback list. Resolution: tool argument, then role frontmatter, `models.agents`, `models.default`, then the parent model. Fallbacks: ordinary non-persistent runs can try later candidates after a launch failure or a provider/agent error from a running child, never after a completed negative result; persistent specialists do not advance after a running-child error; fallback lists are rejected with `worktree`. A listed model does not prove the account can use it. |
 | `thinking` | `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`, subject to model support. Precedence: this argument, then role `thinking`, then the parent level. Choose the model tier first, then thinking within its range: low for bounded mechanical work, medium for ordinary implementation or review, high+ for architecture, security, hard diagnosis. Omitting uses the role's `thinking` when set, otherwise the parent level (discouraged). |
 | `tools`, `skills` | Comma-separated tool or skill names for the child. |
 | `cwd` | Working directory (a role folder with its own config), or the source repository when `worktree` is set. |
@@ -62,8 +62,7 @@ an external CLI (`cli`) fail before launch. Role frontmatter can set
 (tools registered by this package). Children also get `caller_ping`, and
 interactive (non-`auto-exit`) children get `subagent_done` to mark themselves
 complete; `auto-exit` roles exit on their own. These exist only inside child
-sessions. Parent-only tools (`worktree_list`, `worktree_remove`,
-`subagents_write_task_models`, `/subagents-init`) are omitted in children. For
+sessions. Parent-only tools (`worktree_list`, `worktree_remove`) are omitted in children. For
 frontmatter authoring, read [Custom Agents](../../docs/roles.md#custom-agents)
 and [Tool Access Control](../../docs/roles.md#tool-access-control).
 
@@ -229,8 +228,9 @@ initialized submodules). Ignored files are neither blockers nor preserved by
 
 Durable config: `$PI_CODING_AGENT_DIR/herdr-agents/config.json` (default
 `~/.pi/agent/herdr-agents/config.json`); never the package root. Copy the
-package's `config.json.example` or run `/subagents-init`. Run `/reload` after
-changes. Without a real file, only non-model settings fall back to the example.
+package's `config.json.example`. Run `/reload` after changes. Without a real
+file, only non-model settings fall back to the example. An unknown key is a
+configuration error, so a stale section is reported instead of ignored.
 
 | Key | Purpose |
 | --- | --- |
@@ -238,32 +238,14 @@ changes. Without a real file, only non-model settings fall back to the example.
 | `sidebar.enabled` | Opt-in delegated-child markers for the optional Herdr sidebar plugin; off by default |
 | `models.default` | Model for children that specify none |
 | `models.agents` | Per-role model, keyed by role name |
-| `models.tasks` | Ordered exact-ID candidates per category for `task:<category>` |
-| `models.tasksMeta` | Provenance of the task preferences |
 | `persistent.maxAgents` | Retained specialist cap (default 3) |
 | `supervision.*`, `panes.*` | Transport, hang advisory minutes, pane grouping |
 | `roles.bundled` | Deprecated no-op; remove it |
 
-Model values must be exact authenticated IDs. `/subagents-init [preferences]`
-drafts task preferences from the live model registry and the saved config's
-`configRevision`, then saves them through `subagents_write_task_models`
-(parent-only; validates, atomically replaces `models.tasks` and `tasksMeta`,
-preserves other settings). When one loaded extension offers to approve the
-write, the init prompt names that extension's tool instead; follow the prompt
-and do not call the writer around it. Payload: `tasks`
-(partial but nonempty categories; empty `tasks: {}` and duplicate refs within a
-category are rejected) and required `tasksMeta`. Warning: categories you omit
-are removed from the saved config, so send every category you want to keep.
-Optional `basis` states what the ranking rests on and is not saved: use
-`{"kind":"registry-only"}` unless sources consulted in this run informed it,
-then `{"kind":"research","sources":[{"url":"https://...","influence":"how it changed the ranking"}],"uncertainty":"what remains unknown"}`.
-Its kind must equal `tasksMeta.method`.
-Optional `expectedConfigRevision` (`sha256:` plus 64 lowercase hex digits of the exact file bytes,
-or `missing`) makes the write conditional; a stale revision fails with
-`Stale task model config revision`: re-read, re-propose, re-approve, do not
-retry blindly. Every write holds an advisory `config.json.lock`; a held lock
-fails immediately with `Task model config writer busy`, and it is never broken
-automatically. Remove it only after confirming no writer is active.
+Model values must be exact authenticated IDs. Put a role's model in its `.md`
+frontmatter, in `models.agents`, or in `models.default`; a `subagent` call can
+override it per launch. A model value can also be an ordered comma-separated
+fallback list, which is rejected with `worktree`.
 
 ## Optional Herdr sidebar plugin
 

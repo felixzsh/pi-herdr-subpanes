@@ -15,7 +15,7 @@ provider; fakes are for conformance tests only.
 - `maestro/core/` — seam interfaces/types, activity and lifecycle projection,
   status, routing, wake-ups, and supervision.
 - `maestro/core/roles/discovery.ts`, `maestro/core/config/` — role discovery,
-  config loaders with injected directories, and task-model init prompt logic.
+  and config loaders with injected directories.
 - `maestro/core/worktree.ts`, `maestro/core/worktree-cleanup.ts` — manifest
   schema/state, handoff types, and cleanup eligibility/formatting.
 - `maestro/adapters/pi/` — Pi launch, completion, session I/O, activity files,
@@ -25,8 +25,8 @@ provider; fakes are for conformance tests only.
   terminal scripts/placement, and `herdr-socket.ts`, the bounded socket
   client for pane metadata.
 - `maestro/runtime/` — run ownership, controls/retries, observation,
-  delivery-gated cleanup, Pi composition, worktree operations/handoff,
-  task-model init composition, and sidebar markers (`delegated-marker.ts`).
+  delivery-gated cleanup, Pi composition, worktree operations/handoff, and
+  sidebar markers (`delegated-marker.ts`).
 - `plugins/sidebar/` — the optional Herdr plugin. Its `sidebar.mjs` uses Node
   built-ins only and imports nothing from the extension, so Herdr can install
   the directory by itself.

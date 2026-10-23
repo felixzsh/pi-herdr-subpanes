@@ -143,7 +143,7 @@ Apply these rules:
 
 1. Prefer per-invocation `model` and `thinking` for a workflow's deliberate
    diversity or cost/quality policy.
-2. Use `$PI_CODING_AGENT_DIR/herdr-agents/config.json` for a person's durable role preferences; package-root configuration is ignored, so move an older file manually or re-run `/subagents-init`.
+2. Use `$PI_CODING_AGENT_DIR/herdr-agents/config.json` for a person's durable role preferences; package-root configuration is ignored, so move an older file manually.
 3. Leave bundled role `model` unset unless a particular model is a functional
    prerequisite.
 4. State runtime prerequisites before launch and fail closed when a required

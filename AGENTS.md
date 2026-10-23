@@ -29,12 +29,12 @@ Former bundled roles, `/plan`, its plan skill, and `/skill:orchestrate` now belo
 - `pi-extension/subagents/model-registry.ts`, `config-path.ts` — permanent host-local SDK capability glue and configuration-path conventions
 - `maestro/core/` — seam interfaces and types; activity/lifecycle/status projection, routing, wake-ups, and supervision
 - `plugins/sidebar/` — optional standalone Node companion Herdr plugin; it imports nothing from the extension
-- `maestro/core/roles/discovery.ts`, `maestro/core/config/` — role parsing/discovery, injected-directory config loaders, and task-model init prompt construction
+- `maestro/core/roles/discovery.ts`, `maestro/core/config/` — role parsing/discovery and injected-directory config loaders
 - `maestro/core/worktree.ts`, `worktree-cleanup.ts` — manifest schema/state, handoff types, and cleanup eligibility/formatting
-- `maestro/adapters/pi/` — `PiHarnessAdapter`, launch transactions, completion evidence, session I/O, activity files, SDK model glue, and task-model registry projection
+- `maestro/adapters/pi/` — `PiHarnessAdapter`, launch transactions, completion evidence, session I/O, activity files, and SDK model glue
 - `maestro/adapters/pi/child/subagent-done.ts` — child protocol: `caller_ping`, `subagent_done`, and activity recording
 - `maestro/surfaces/herdr/` — `HerdrSurfaceProvider`, Herdr CLI driver, and terminal scripts/placement, plus `herdr-socket.ts` for socket pane metadata
-- `maestro/runtime/` — `RunSession`, Pi composition, run ownership, controls/retries, observation, delivery-gated cleanup, worktree operations/handoff, and task-model init composition, plus `delegated-marker.ts` for delegated-child sidebar markers
+- `maestro/runtime/` — `RunSession`, Pi composition, run ownership, controls/retries, observation, delivery-gated cleanup, worktree operations/handoff, plus `delegated-marker.ts` for delegated-child sidebar markers
 - `maestro/adapters/fake/`, `maestro/surfaces/fake/`, `test/maestro/` — conformance fakes, seam tests, and the dependency-rule test
 - `CONTEXT.md` — orchestration-domain glossary
 - `docs/adr/` — hard-to-reverse architectural decisions; [ADR-0012](docs/adr/0012-adopt-maestro-seams-in-repo.md) records the maestro seams decision
@@ -75,7 +75,7 @@ Read [`docs/worktree-subagents.md`](docs/worktree-subagents.md) before changing 
 When behavior changes, update every affected surface in the same commit:
 
 - public tool parameters or lifecycle → `docs/tools.md`, plus the `README.md` summary when everyday use changes
-- configuration keys, model routing, or task-model init events → `docs/configuration.md`, plus the `README.md` summary when everyday use changes
+- configuration keys or model routing → `docs/configuration.md`, plus the `README.md` summary when everyday use changes
 - role-pack protocol or role frontmatter → `docs/roles.md`
 - troubleshooting steps → `docs/troubleshooting.md`
 - code map → this file and `docs/development.md`
@@ -120,7 +120,7 @@ Before committing:
 
 - inspect `git status` and the final diff;
 - confirm the package preview includes `CHANGELOG.md`, `README.md`, `config.json.example`, and `pi-extension/subagents/index.ts`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-agents/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`, plans, journals, sessions, prototypes, generated evidence, local config, and `openspec/`;
-- run `npm pack --dry-run` when package contents or documentation paths changed; durable configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, never package-root `config.json` (move old files manually or re-run `/subagents-init`);
+- run `npm pack --dry-run` when package contents or documentation paths changed; durable configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, never package-root `config.json` (move old files manually);
 - confirm that no generated plans, journals, sessions, provider configuration, test scripts, or review artifacts are staged; and
 - confirm that no accidental empty directory exists at the repository root:
 

@@ -268,11 +268,6 @@ describe("pack-neutral package contents", () => {
 				/Independent reviewers should use/i,
 				`${label} must not weaken independent review to a suggestion`,
 			);
-			assert.doesNotMatch(
-				content,
-				/For review when the authoring family is known, choose an exact shortlist ID[^.]*task:review`; this is guidance/i,
-				`${label} must replace the unconditional task:review paragraph`,
-			);
 		}
 	});
 
@@ -285,14 +280,10 @@ describe("pack-neutral package contents", () => {
 			),
 			sectionBetween(
 				configurationDoc,
-				"`models.tasks` candidates are ordered exact authenticated IDs.",
-				"Run `/subagents-init",
+				"## Model preferences",
+				"## Sidebar markers",
 			),
-			sectionBetween(
-				configurationDoc,
-				"Shortlists do not enforce reviewer independence.",
-				"Set `persistent.maxAgents`",
-			),
+			sectionBetween(readme, "## Choose models", "## Control running children"),
 		];
 		for (const [index, passage] of passages.entries())
 			for (const clause of ordinaryReviewClauses)

@@ -136,7 +136,6 @@ The parent session gets these tools:
 | `subagents_list` | List agent definitions, live specialists, and the supervision mode. |
 | `worktree_list` | List managed worktrees and what blocks their cleanup. |
 | `worktree_remove` | Remove one managed worktree on explicit request. |
-| `subagents_write_task_models` | Internal writer for `models.tasks` preferences. |
 
 Children get `caller_ping` to ask the parent for help. Interactive children also get `subagent_done` to mark themselves complete.
 
@@ -144,7 +143,6 @@ Children get `caller_ping` to ask the parent for help. Interactive children also
 | --- | --- |
 | `/subagent <agent> <task>` | Launch a named role. `/subagent list` lists roles. |
 | `/worktree <name> [task]` | Continue this conversation in a new managed worktree. `/worktree list` and `/worktree remove <target>` manage them. |
-| `/subagents-init [preferences]` | Draft task-category model preferences from the live model registry. |
 | `/skill:pi-herdr-agents` | Load the host operating guide. |
 
 The main `subagent` parameters are `name`, `task`, `agent`, `model`, `thinking`, `fork`, `cwd`, `persistent`, `interactive`, and `worktree`. See [Parameters](docs/tools.md#parameters) for every parameter, and [Tools and lifecycle reference](docs/tools.md) for the full behavior of each tool. Live tool descriptions and these documents are authoritative. The `pi-herdr-agents` skill is a general operating guide.
@@ -159,15 +157,11 @@ Set each child's exact authenticated `provider/model-id` and a supported thinkin
 
 Then set thinking within that model's range. Without `model`, a child uses agent frontmatter, then `models.agents.<name>`, then `models.default`, then the parent model. Without `thinking`, it uses the role's thinking level when set, otherwise the parent level.
 
-A `model` value can also be an ordered fallback list, such as `provider/preferred, provider/fallback`, or a whole-value `task:<category>`. Task categories are `coding`, `review`, `recon`, `qa`, `architecture`, and `docs`. Their candidates come from `models.tasks` in `config.json`. Run `/subagents-init` to draft those preferences from your authenticated models, then `/reload`:
-
-```text
-/subagents-init Prefer capability over price for implementation; keep recon inexpensive
-```
+A `model` value can also be an ordered fallback list, such as `provider/preferred, provider/fallback`.
 
 Ordinary non-persistent runs try later candidates after a launch failure or a provider or agent error, never after a completed negative result. Persistent specialists do not advance after a running-child error. Worktrees use the first authenticated candidate only. A catalog-listed model can still be rejected by your provider account at request time.
 
-Cross-family independent review requires a reviewer from a different model family than the author. `task:review` alone does not establish that. For ordinary review, prefer a different authenticated model family. When no other authenticated model family is available, ordinary review may use a same-family reviewer in a fresh standalone session. Disclose that this review is context-isolated, not cross-family independent. Cross-family verification must not use this fallback. See [Model resolution and fallback](docs/configuration.md#model-resolution-and-fallback), [Task routing](docs/configuration.md#task-routing), and [Draft task-model preferences](docs/configuration.md#draft-task-model-preferences).
+Cross-family independent review requires a reviewer from a different model family than the author. For ordinary review, prefer a different authenticated model family. When no other authenticated model family is available, ordinary review may use a same-family reviewer in a fresh standalone session. Disclose that this review is context-isolated, not cross-family independent. Cross-family verification must not use this fallback. See [Model resolution and fallback](docs/configuration.md#model-resolution-and-fallback).
 
 ## Control running children
 
@@ -289,24 +283,24 @@ Focus is display only. Hidden children keep running and still raise notification
 
 ## Configuration
 
-The durable configuration file is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, default `~/.pi/agent/herdr-agents/config.json`. Package upgrades never overwrite it. Create it by copying the installed package's `config.json.example`, or run `/subagents-init`. The extension reads it at startup, so run `/reload` after any change. A package-root `config.json` is ignored.
+The durable configuration file is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, default `~/.pi/agent/herdr-agents/config.json`. Package upgrades never overwrite it. Create it by copying the installed package's `config.json.example`. The extension reads it at startup, so run `/reload` after any change. A package-root `config.json` is ignored.
 
 | Key | Default | Controls |
 | --- | --- | --- |
 | `status.enabled` | `true` | The live subagent widget. This section is required. |
-| `models.default`, `models.agents`, `models.tasks` | none | Model defaults and task-category candidates. |
+| `models.default`, `models.agents` | none | Model defaults, global and per agent. |
 | `persistent.maxAgents` | `3` | How many persistent specialists can stay open. |
 | `supervision.forcePolling`, `supervision.hangWarningMinutes` | `false`, `15` | Supervision transport and no-progress advisories. |
 | `panes.mode`, `panes.direction`, `panes.maxPerTab` | `"grouped"`, `"right"`, `4` | Where child panes open. |
 | `sidebar.enabled` | `false` | Pane markers for the sidebar plugin. |
 
-See [Configuration](docs/configuration.md) for every key, the task-model writer, and the events other extensions can use during `/subagents-init`.
+See [Configuration](docs/configuration.md) for every key.
 
 ## Safety and uninstall
 
 - Child agents are real Pi processes running with your user account's permissions, inside Herdr panes. Worktrees isolate Git checkouts, not processes or permissions.
 - The extension creates Herdr panes, tabs and managed worktrees only when a launch asks for them. It never pushes, merges, opens pull requests, deletes branches or removes worktrees on its own; cleanup is an explicit parent action ([worktree cleanup](docs/tools.md#explicit-worktree-cleanup)).
-- What it writes: `$PI_CODING_AGENT_DIR/herdr-agents/config.json` (only through `/subagents-init` or the writer tool, never on startup); per-launch artifacts under the parent session's `artifacts/<session-id>/` directory beside Pi's session store, which hold the child's full task text and any `systemPrompt` as Markdown files, activity snapshots and worktree manifests; and the child's own Pi session file. A managed worktree that carries its own `.pi/agent` directory receives that child's session inside the checkout. Treat task text as potentially sensitive when you share or inspect those files.
+- What it writes: per-launch artifacts under the parent session's `artifacts/<session-id>/` directory beside Pi's session store, which hold the child's full task text and any `systemPrompt` as Markdown files, activity snapshots and worktree manifests; and the child's own Pi session file. A managed worktree that carries its own `.pi/agent` directory receives that child's session inside the checkout. Treat task text as potentially sensitive when you share or inspect those files.
 - Managed worktree children record their PID, process start time, boot ID, and PID namespace in `<session>.process.json` beside their session. With [`sidebar.enabled`](docs/configuration.md#sidebar-markers), the parent reads each child pane's agent session from Herdr and reports one display-only pane token, `piha_delegated_v1`, on that pane through the Herdr socket. With the setting off, the extension writes no pane metadata.
 - To uninstall: first list and remove any retained worktrees while the extension is still loaded (`/worktree list`, then `/worktree remove <target>`), because those commands leave with the package. If you installed the optional sidebar plugin, remove it with `herdr plugin uninstall pi-herdr-agents.sidebar` (or `herdr plugin unlink` for a linked copy). Then run `pi remove npm:pi-herdr-agents`, and delete `$PI_CODING_AGENT_DIR/herdr-agents/` and the `artifacts/` directories above if you no longer want the configuration and launch records.
 
@@ -324,7 +318,7 @@ More checks are in [Troubleshooting](docs/troubleshooting.md).
 | Page | Contents |
 | --- | --- |
 | [Tools and lifecycle](docs/tools.md) | Every tool and command, parameters, status labels, persistent specialists, interrupt, cancel, resume, and `/worktree` |
-| [Configuration](docs/configuration.md) | `config.json`, model preferences, `/subagents-init`, init events, sidebar markers, supervision, and pane placement |
+| [Configuration](docs/configuration.md) | `config.json`, model preferences, sidebar markers, supervision, and pane placement |
 | [Roles and custom agents](docs/roles.md) | Discovery, frontmatter reference, tool access control, and role packs |
 | [Worktree subagents](docs/worktree-subagents.md) | Worktree operation, review, recovery, and cleanup |
 | [Troubleshooting](docs/troubleshooting.md) | Completion delivery and other common problems |
