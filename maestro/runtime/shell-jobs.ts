@@ -28,7 +28,6 @@ const LIVENESS_GRACE_TICKS = 4;
 const LIVENESS_FAIL_LIMIT = 2;
 /** Prompt observations tolerated before a job with no start evidence is settled. */
 const NEVER_STARTED_PROMPT_TICKS = 2;
-const ORPHAN_GRACE_MS = 60_000;
 const PREVIEW_OUTPUT_BYTES = 2_048;
 const PREVIEW_LINES = DEFAULT_LOG_LINES;
 const PANE_COMMAND_LIMIT = 48;
@@ -45,12 +44,11 @@ export interface ShellJobsRuntimeOptions {
 	wakeRegistry?: FileWakeRegistry;
 	parentSessionId?: string;
 	/**
-	 * Liveness probe for the session that owns a job. A parent may only finalize
-	 * and announce a child's job once the owner is no longer alive. The default
-	 * assumes every session stays alive, so without an explicit probe nothing is
-	 * ever adopted.
+	 * Child sessions whose completion this process observed. Only such a child's
+	 * job may be adopted and announced; after a restart the set is empty, so a
+	 * child's job stays running until its owner reports or an operator cancels.
 	 */
-	isSessionLive?: (sessionId: string) => boolean;
+	observedChildCompletions?: ReadonlySet<string>;
 	/** Label of the calling pane, appended to the job pane name. */
 	callerLabel?: string;
 	/** Herdr binary the runner uses to close its own pane. */
@@ -166,7 +164,7 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 	private readonly wakeRegistry: FileWakeRegistry;
 	private readonly sessionId: string;
 	private readonly parentSessionId: string | undefined;
-	private readonly isSessionLive: (sessionId: string) => boolean;
+	private readonly observedChildCompletions: ReadonlySet<string>;
 	private readonly cwd: string;
 	private readonly maxPerTab: number;
 	private readonly direction: ShellJobDirection;
@@ -186,7 +184,8 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 		this.wakeRegistry = options.wakeRegistry ?? new FileWakeRegistry();
 		this.sessionId = options.sessionId;
 		this.parentSessionId = options.parentSessionId;
-		this.isSessionLive = options.isSessionLive ?? (() => true);
+		this.observedChildCompletions =
+			options.observedChildCompletions ?? new Set();
 		this.cwd = options.cwd;
 		this.maxPerTab = options.maxPerTab;
 		this.direction = options.direction;
@@ -316,7 +315,11 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 			// An explicit cancel settles immediately instead of waiting for a sweep.
 			// Finalize against the shared record while an inspection may still be
 			// awaiting the surface; that pass re-checks the job and stands down.
-			await this.finish(entry, "cancelled", null);
+			// An operator cancel is the only way to close a job whose owner died
+			// without an observed completion.
+			await this.finish(entry, "cancelled", null, undefined, {
+				operator: true,
+			});
 		}
 		return entry.job;
 	}
@@ -352,72 +355,48 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 		const jobs = await this.store.list();
 		const byId = new Map(jobs.map((job) => [job.id, job]));
 		for (const [id, entry] of this.entries) {
-			// A watching or starting entry is authoritative for this runtime.
-			if (entry.watching || entry.starting) continue;
+			// A starting entry is authoritative for this runtime.
+			if (entry.starting) continue;
 			const persisted = byId.get(id);
 			// Drop the local copy once the shared record is gone or settled; a
-			// stale disk read never replaces a terminal local entry.
+			// stale disk read never replaces a terminal local entry. A watcher is
+			// no longer authoritative once another session settled its job.
 			if (!persisted || persisted.state !== "running") {
+				if (entry.watching) this.untrack(id);
 				this.entries.delete(id);
 			}
 		}
-		const now = this.clock.now();
 		for (const job of jobs) {
 			if (job.state !== "running") continue;
+			// Watching or settling a foreign job is wasted work: only the owner or
+			// an observed child's adopter can act on it.
+			if (!this.authorized(job)) continue;
 			const entry = this.entries.get(job.id) ?? this.entryFor(job);
 			if (entry.starting) continue;
 			// This runtime's watcher owns its own jobs and their delivery.
 			if (entry.watching) continue;
 			const marker = this.store.readMarker(entry.job);
-			if (!marker) continue;
-			const finishedAt = marker.finishedAtMs ?? now;
-			const age = now - finishedAt;
+			if (!marker) {
+				// An authorized running job with no marker still needs a watcher:
+				// reconcile may be the first to see a job started after `watch()`,
+				// and adoption without liveness would leave it running forever.
+				// The sweep settles it as unknown when its pane is gone or the
+				// process is back at the prompt without reporting a result.
+				this.track(entry.job);
+				this.ensureSweep();
+				continue;
+			}
 			const state: ShellJobState = marker.exit === 0 ? "succeeded" : "failed";
-			const owner = entry.job;
-			if (owner.sessionId === this.sessionId) {
-				await this.finish(
-					entry,
-					state,
-					marker.exit,
-					undefined,
-					true,
-					finishedAt,
-				);
-				continue;
-			}
-			// A job belongs to the session that started it. Another runtime only
-			// steps in once that session is gone.
-			if (this.isSessionLive(owner.sessionId)) continue;
-			if (owner.parentSessionId === this.sessionId) {
-				await this.finish(
-					entry,
-					state,
-					marker.exit,
-					undefined,
-					true,
-					finishedAt,
-				);
-				continue;
-			}
-			if (owner.parentSessionId === undefined && age >= ORPHAN_GRACE_MS) {
-				await this.finish(
-					entry,
-					state,
-					marker.exit,
-					"finalized after its owning session exited",
-					false,
-					finishedAt,
-				);
-			}
+			// Only the owner or an observed child's adopter may persist a terminal
+			// state here; a foreign runtime leaves the job to its owner.
+			await this.finish(entry, state, marker.exit);
 		}
 	}
 
 	async watch(): Promise<void> {
 		await this.store.ensure();
 		for (const job of await this.store.list()) {
-			if (job.state === "running" && job.sessionId === this.sessionId) {
-				this.track(job);
-			}
+			if (job.state === "running" && this.authorized(job)) this.track(job);
 		}
 		this.ensureSweep();
 		await this.reconcile();
@@ -470,6 +449,18 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 			pendingWake: false,
 			finishChain: Promise.resolve(),
 		};
+	}
+
+	/**
+	 * True when this runtime may persist the job's terminal state: it started the
+	 * job, or the job belongs to a child whose completion this process observed.
+	 */
+	private authorized(job: ShellJob): boolean {
+		if (job.sessionId === this.sessionId) return true;
+		return (
+			job.parentSessionId === this.sessionId &&
+			this.observedChildCompletions.has(job.sessionId)
+		);
 	}
 
 	/** Registers a running job for this runtime, reusing its authoritative entry. */
@@ -555,9 +546,6 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 				entry,
 				marker.exit === 0 ? "succeeded" : "failed",
 				marker.exit,
-				undefined,
-				true,
-				marker.finishedAtMs,
 			);
 			return;
 		}
@@ -578,9 +566,6 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 				entry,
 				lateMarker.exit === 0 ? "succeeded" : "failed",
 				lateMarker.exit,
-				undefined,
-				true,
-				lateMarker.finishedAtMs,
 			);
 			return;
 		}
@@ -633,18 +618,10 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 		state: ShellJobState,
 		exitCode: number | null,
 		note?: string,
-		deliverNotice = true,
-		markerFinishedAtMs?: number,
+		options: { operator?: boolean } = {},
 	): Promise<void> {
 		entry.finishChain = entry.finishChain.then(() =>
-			this.applyFinish(
-				entry,
-				state,
-				exitCode,
-				note,
-				deliverNotice,
-				markerFinishedAtMs,
-			),
+			this.applyFinish(entry, state, exitCode, note, options.operator === true),
 		);
 		return entry.finishChain;
 	}
@@ -654,8 +631,7 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 		state: ShellJobState,
 		exitCode: number | null,
 		note: string | undefined,
-		deliverNotice: boolean,
-		markerFinishedAtMs: number | undefined,
+		operator: boolean,
 	): Promise<void> {
 		const job = entry.job;
 		// Idempotent against the shared record: cancel beats an older decision.
@@ -668,28 +644,18 @@ class ShellJobsRuntimeState implements ShellJobsRuntime {
 			this.untrack(persisted.id);
 			return;
 		}
-		// Authorization is decided only after the asynchronous read: the owning
-		// session may have resumed while this finish was waiting on disk. Only
-		// the session that started a job settles and announces it. A parent may
-		// adopt a child's job only while the owning session is gone, and a
-		// parentless orphan settles silently once its stale marker ages out.
-		// `deliverNotice` only suppresses the announcement; it never authorizes.
-		const owns = job.sessionId === this.sessionId;
-		const parentAdopts =
-			job.parentSessionId === this.sessionId &&
-			!this.isSessionLive(job.sessionId);
-		const orphanSettles =
-			job.parentSessionId === undefined &&
-			markerFinishedAtMs !== undefined &&
-			!this.isSessionLive(job.sessionId) &&
-			this.clock.now() - markerFinishedAtMs >= ORPHAN_GRACE_MS;
-		if (!owns && !parentAdopts && !orphanSettles) return;
+		// Authorization is decided only after the asynchronous read. Only the
+		// session that started a job announces it, and a parent may adopt a child's
+		// job only after this process observed that child finish. A foreign runtime
+		// never writes a terminal state, not even without a notice: the live owner
+		// would then read a settled record and stay silent, losing the only
+		// announcement. A dead owner's job stays running until an explicit
+		// `bg_shell_status cancel` (the operator path below).
+		const adoptable = this.authorized(job);
+		if (!adoptable && !operator) return;
 		const now = this.clock.now();
 		const willDeliver =
-			deliverNotice &&
-			(owns || parentAdopts) &&
-			!job.notified &&
-			this.delivery !== undefined;
+			adoptable && !job.notified && this.delivery !== undefined;
 		const finished: ShellJob = {
 			...job,
 			state,

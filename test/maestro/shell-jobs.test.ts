@@ -182,7 +182,7 @@ interface RuntimeParts {
 	maxPerTab?: number;
 	direction?: ShellJobDirection;
 	wakeRegistry?: FileWakeRegistry;
-	isSessionLive?: (sessionId: string) => boolean;
+	observedChildCompletions?: ReadonlySet<string>;
 }
 
 /**
@@ -221,7 +221,7 @@ function createRuntime(parts: RuntimeParts): ShellJobsRuntime {
 		direction: parts.direction ?? "down",
 		callerLabel: parts.callerLabel,
 		wakeRegistry: parts.wakeRegistry,
-		isSessionLive: parts.isSessionLive,
+		observedChildCompletions: parts.observedChildCompletions,
 		herdrBin: "herdr-test",
 	});
 }
@@ -506,10 +506,23 @@ describe("shell job runtime", () => {
 		}
 	});
 
-	it("lets the parent adopt a dead owner's job exactly once", async () => {
+	it("adopts and announces an observed child's job exactly once", async () => {
 		const fake = createFakeClock();
 		const { surface, state } = createFakeSurface();
-		const { delivery, deliveries } = createDelivery();
+		const events: string[] = [];
+		const orderedStore: ShellJobStore = {
+			...store,
+			async save(job) {
+				if (job.state !== "running")
+					events.push(`saved notified=${job.notified}`);
+				await store.save(job);
+			},
+		};
+		const delivery: ShellJobDelivery = {
+			deliver() {
+				events.push("delivered");
+			},
+		};
 		const job = makeJob(store, "sh_adopted_1", {
 			sessionId: "session-child",
 			parentSessionId: "session-parent",
@@ -519,19 +532,67 @@ describe("shell job runtime", () => {
 		await writeMarker(job, 0, fake.clock.now() - 20_000);
 		const runtime = createRuntime({
 			surface,
-			store,
+			store: orderedStore,
 			clock: fake.clock,
 			delivery,
 			sessionId: "session-parent",
-			isSessionLive: () => false,
+			observedChildCompletions: new Set(["session-child"]),
 		});
 		try {
 			await runtime.reconcile();
 			const adopted = await runtime.get(job.id);
 			assert.equal(adopted?.state, "succeeded");
 			assert.equal(adopted?.notified, true);
+			assert.deepEqual(events, ["saved notified=true", "delivered"]);
+			assert.deepEqual(state.closed, [job.paneId]);
+			await runtime.reconcile();
+			assert.deepEqual(events, ["saved notified=true", "delivered"]);
+			assert.deepEqual(state.closed, [job.paneId]);
+		} finally {
+			runtime.close();
+		}
+	});
+
+	it("watches an adopted job with no marker once its child is observed", async () => {
+		const fake = createFakeClock();
+		const { surface, state } = createFakeSurface();
+		const { delivery, deliveries } = createDelivery();
+		const observed = new Set<string>();
+		const runtime = createRuntime({
+			surface,
+			store,
+			clock: fake.clock,
+			delivery,
+			sessionId: "session-parent",
+			observedChildCompletions: observed,
+			wakeRegistry: new SilentWakeRegistry(),
+		});
+		try {
+			// The parent starts and runs watch() before the child's job exists.
+			await runtime.watch();
+			const job = makeJob(store, "sh_adopted_markerless_1", {
+				sessionId: "session-child",
+				parentSessionId: "session-parent",
+				startedAt: fake.clock.now(),
+			});
+			await store.save(job);
+			observed.add("session-child");
+			// The runner looks alive, then its pane disappears without a marker.
+			const inspections: ShellPaneInspection[] = [
+				{ alive: true, backAtPrompt: false },
+				{ alive: false, backAtPrompt: false },
+			];
+			state.inspection = () =>
+				inspections.shift() ?? { alive: false, backAtPrompt: false };
+			await runtime.reconcile();
+			for (let tick = 0; tick < 10; tick++) await fake.fire();
+			const adopted = await runtime.get(job.id);
+			assert.equal(adopted?.state, "unknown");
+			assert.equal(adopted?.exitCode, null);
 			assert.equal(deliveries.length, 1);
 			assert.deepEqual(state.closed, [job.paneId]);
+			// The settled job must not be announced or closed a second time.
+			await fake.fire();
 			await runtime.reconcile();
 			assert.equal(deliveries.length, 1);
 			assert.deepEqual(state.closed, [job.paneId]);
@@ -540,11 +601,86 @@ describe("shell job runtime", () => {
 		}
 	});
 
-	it("does not adopt or deliver a living owner's job", async () => {
+	it("settles an adopted job that returned to the prompt with no marker", async () => {
 		const fake = createFakeClock();
 		const { surface, state } = createFakeSurface();
 		const { delivery, deliveries } = createDelivery();
-		const job = makeJob(store, "sh_live_owner_1", {
+		const observed = new Set<string>();
+		state.inspection = () => ({ alive: true, backAtPrompt: true });
+		const runtime = createRuntime({
+			surface,
+			store,
+			clock: fake.clock,
+			delivery,
+			sessionId: "session-parent",
+			observedChildCompletions: observed,
+			wakeRegistry: new SilentWakeRegistry(),
+		});
+		try {
+			await runtime.watch();
+			const job = makeJob(store, "sh_adopted_markerless_2", {
+				sessionId: "session-child",
+				parentSessionId: "session-parent",
+				startedAt: fake.clock.now(),
+			});
+			await store.save(job);
+			// The runner had started, so the prompt observation means it exited.
+			await writeFile(`${job.statusPath}.started`, "");
+			observed.add("session-child");
+			await runtime.reconcile();
+			for (let tick = 0; tick < 8; tick++) await fake.fire();
+			const adopted = await runtime.get(job.id);
+			assert.equal(adopted?.state, "unknown");
+			assert.equal(
+				adopted?.note,
+				"the process exited without reporting a result",
+			);
+			assert.equal(deliveries.length, 1);
+			assert.deepEqual(state.closed, [job.paneId]);
+		} finally {
+			runtime.close();
+		}
+	});
+
+	it("leaves a foreign job running even when its marker proves completion", async () => {
+		const fake = createFakeClock();
+		const { surface, state } = createFakeSurface();
+		const { delivery, deliveries } = createDelivery();
+		const job = makeJob(store, "sh_orphan_1", {
+			sessionId: "session-gone",
+			startedAt: fake.clock.now() - 120_000,
+		});
+		await store.save(job);
+		await writeMarker(job, 3, fake.clock.now() - 20_000);
+		const runtime = createRuntime({
+			surface,
+			store,
+			clock: fake.clock,
+			delivery,
+			sessionId: "session-parent",
+		});
+		try {
+			await runtime.reconcile();
+			// The owner may be alive somewhere else: only it may persist and announce.
+			const orphan = await runtime.get(job.id);
+			assert.equal(orphan?.state, "running");
+			assert.equal(orphan?.notified, false);
+			assert.equal(deliveries.length, 0);
+			assert.deepEqual(state.closed, []);
+			await runtime.reconcile();
+			assert.equal((await runtime.get(job.id))?.state, "running");
+			assert.equal(deliveries.length, 0);
+			assert.deepEqual(state.closed, []);
+		} finally {
+			runtime.close();
+		}
+	});
+
+	it("leaves an unobserved child's job to its owner", async () => {
+		const fake = createFakeClock();
+		const { surface, state } = createFakeSurface();
+		const { delivery, deliveries } = createDelivery();
+		const job = makeJob(store, "sh_unobserved_child_1", {
 			sessionId: "session-child",
 			parentSessionId: "session-parent",
 			startedAt: fake.clock.now() - 60_000,
@@ -557,12 +693,12 @@ describe("shell job runtime", () => {
 			clock: fake.clock,
 			delivery,
 			sessionId: "session-parent",
-			isSessionLive: () => true,
 		});
 		try {
 			await runtime.reconcile();
-			await runtime.reconcile();
-			assert.equal((await runtime.get(job.id))?.state, "running");
+			const settled = await runtime.get(job.id);
+			assert.equal(settled?.state, "running");
+			assert.equal(settled?.notified, false);
 			assert.equal(deliveries.length, 0);
 			assert.deepEqual(state.closed, []);
 		} finally {
@@ -570,130 +706,71 @@ describe("shell job runtime", () => {
 		}
 	});
 
-	it("finalizes a stale orphan without notifying anyone", async () => {
+	it("lets the live owner announce once after a foreign runtime reconciled", async () => {
 		const fake = createFakeClock();
 		const { surface, state } = createFakeSurface();
 		const { delivery, deliveries } = createDelivery();
-		const job = makeJob(store, "sh_orphan_1", {
+		const job = makeJob(store, "sh_owner_alive_1", {
+			sessionId: "session-owner",
+			startedAt: fake.clock.now() - 60_000,
+		});
+		await store.save(job);
+		await writeMarker(job, 0, fake.clock.now() - 20_000);
+		const foreign = createRuntime({
+			surface,
+			store,
+			clock: fake.clock,
+			delivery,
+			sessionId: "session-other",
+		});
+		const owner = createRuntime({
+			surface,
+			store,
+			clock: fake.clock,
+			delivery,
+			sessionId: "session-owner",
+		});
+		try {
+			await foreign.reconcile();
+			assert.equal((await foreign.get(job.id))?.state, "running");
+			assert.equal(deliveries.length, 0);
+			await owner.reconcile();
+			await owner.reconcile();
+			const settled = await owner.get(job.id);
+			assert.equal(settled?.state, "succeeded");
+			assert.equal(settled?.notified, true);
+			assert.equal(deliveries.length, 1);
+			assert.deepEqual(state.closed, [job.paneId]);
+		} finally {
+			foreign.close();
+			owner.close();
+		}
+	});
+
+	it("cancels a foreign job explicitly without delivering a notice", async () => {
+		const fake = createFakeClock();
+		const { surface, state } = createFakeSurface();
+		const { delivery, deliveries } = createDelivery();
+		const job = makeJob(store, "sh_cancelled_foreign_1", {
 			sessionId: "session-gone",
 			startedAt: fake.clock.now() - 120_000,
 		});
 		await store.save(job);
-		await writeMarker(job, 3, fake.clock.now() - 61_000);
 		const runtime = createRuntime({
 			surface,
 			store,
 			clock: fake.clock,
 			delivery,
 			sessionId: "session-parent",
-			isSessionLive: () => false,
 		});
 		try {
 			await runtime.reconcile();
-			const orphan = await runtime.get(job.id);
-			assert.equal(orphan?.state, "failed");
-			assert.equal(orphan?.exitCode, 3);
-			assert.equal(orphan?.notified, false);
+			assert.equal((await runtime.get(job.id))?.state, "running");
+			const cancelled = await runtime.cancel(job.id);
+			assert.equal(cancelled?.state, "cancelled");
+			assert.equal(cancelled?.notified, false);
 			assert.equal(deliveries.length, 0);
 			assert.deepEqual(state.closed, [job.paneId]);
-		} finally {
-			runtime.close();
-		}
-	});
-
-	it("does not settle a stale orphan once its owner resumes during the read", async () => {
-		const fake = createFakeClock();
-		const { surface, state } = createFakeSurface();
-		const { delivery, deliveries } = createDelivery();
-		const job = makeJob(store, "sh_orphan_resumed_1", {
-			sessionId: "session-gone",
-			startedAt: fake.clock.now() - 120_000,
-		});
-		await store.save(job);
-		await writeMarker(job, 3, fake.clock.now() - 61_000);
-		let live = false;
-		const suspending = createDeferred<void>();
-		const release = createDeferred<void>();
-		let reads = 0;
-		const barrierStore: ShellJobStore = {
-			...store,
-			async get(id) {
-				reads += 1;
-				if (reads === 1) {
-					suspending.resolve();
-					await release.promise;
-				}
-				return store.get(id);
-			},
-		};
-		const runtime = createRuntime({
-			surface,
-			store: barrierStore,
-			clock: fake.clock,
-			delivery,
-			sessionId: "session-parent",
-			isSessionLive: () => live,
-		});
-		try {
-			const settling = runtime.reconcile();
-			await suspending.promise;
-			// The owner resumes while this finish is suspended on the shared read.
-			live = true;
-			release.resolve();
-			await settling;
-			assert.equal((await store.get(job.id))?.state, "running");
-			assert.equal(deliveries.length, 0);
-			assert.deepEqual(state.closed, []);
-			assert.equal(runtime.diagnostics().tracked, 1);
-		} finally {
-			runtime.close();
-		}
-	});
-
-	it("does not adopt a child's job once its owner resumes during the read", async () => {
-		const fake = createFakeClock();
-		const { surface, state } = createFakeSurface();
-		const { delivery, deliveries } = createDelivery();
-		const job = makeJob(store, "sh_child_resumed_1", {
-			sessionId: "session-child",
-			parentSessionId: "session-parent",
-			startedAt: fake.clock.now() - 120_000,
-		});
-		await store.save(job);
-		await writeMarker(job, 0, fake.clock.now() - 20_000);
-		let live = false;
-		const suspending = createDeferred<void>();
-		const release = createDeferred<void>();
-		let reads = 0;
-		const barrierStore: ShellJobStore = {
-			...store,
-			async get(id) {
-				reads += 1;
-				if (reads === 1) {
-					suspending.resolve();
-					await release.promise;
-				}
-				return store.get(id);
-			},
-		};
-		const runtime = createRuntime({
-			surface,
-			store: barrierStore,
-			clock: fake.clock,
-			delivery,
-			sessionId: "session-parent",
-			isSessionLive: () => live,
-		});
-		try {
-			const settling = runtime.reconcile();
-			await suspending.promise;
-			live = true;
-			release.resolve();
-			await settling;
-			assert.equal((await store.get(job.id))?.state, "running");
-			assert.equal(deliveries.length, 0);
-			assert.deepEqual(state.closed, []);
-			assert.equal(runtime.diagnostics().tracked, 1);
 		} finally {
 			runtime.close();
 		}
@@ -1137,7 +1214,6 @@ describe("shell job runtime", () => {
 			clock: fake.clock,
 			delivery: parentDelivery.delivery,
 			sessionId: "session-parent",
-			isSessionLive: () => false,
 		});
 		try {
 			await parent.reconcile();
@@ -1169,7 +1245,7 @@ describe("shell job runtime", () => {
 			for (const id of settled) {
 				await store.save(
 					makeJob(store, id, {
-						sessionId: "session-b",
+						sessionId: "session-a",
 						startedAt: fake.clock.now(),
 					}),
 				);
@@ -1184,7 +1260,7 @@ describe("shell job runtime", () => {
 			for (const id of pruned) {
 				await store.save(
 					makeJob(store, id, {
-						sessionId: "session-b",
+						sessionId: "session-a",
 						startedAt: fake.clock.now(),
 					}),
 				);

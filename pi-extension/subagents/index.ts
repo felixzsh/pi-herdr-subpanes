@@ -8,7 +8,7 @@ import { keyHint } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "@sinclair/typebox";
 import { Box, Text, truncateToWidth } from "@earendil-works/pi-tui";
 import { join } from "node:path";
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 
 import type { RunCancellation, Task } from "../../maestro/core/types.ts";
@@ -54,10 +54,33 @@ import {
 	borderLine,
 	configureWidgets,
 	refreshWidgets,
+	setShellJobsSource,
 	stopWidgets,
 	renderSubagentWidgetLines as renderWidgetSubagentLines,
+	type ShellJobWidgetEntry,
 	type SubagentWidgetEntry,
 } from "./widgets.ts";
+import {
+	createShellJobDelivery,
+	renderShellJobResult,
+	type ShellJobResultDetails,
+} from "./shell-jobs.ts";
+import {
+	createShellJobsRuntime,
+	type ShellJobsRuntime,
+} from "../../maestro/runtime/shell-jobs.ts";
+import {
+	createHerdrShellJobSurface,
+	isShellJobsSurfaceAvailable,
+} from "../../maestro/runtime/herdr-shell-surface.ts";
+import type {
+	ShellJob,
+	ShellJobClock,
+	ShellJobLogMode,
+	ShellJobState,
+	ShellJobStore,
+	ShellJobSurface,
+} from "../../maestro/core/shell-jobs/types.ts";
 import {
 	loadModelConfig,
 	resolveModelDefault,
@@ -123,6 +146,10 @@ import type {
 // children; the reloaded module adopts the shared registry for status/interrupts.
 const STATUS_INTERVAL_KEY = Symbol.for("pi-subagents/status-interval");
 const RUNTIME_KEY = Symbol.for("pi-subagents/runtime");
+const CHILD_SESSION_IDS_KEY = Symbol.for("pi-subagents/child-session-ids");
+const OBSERVED_CHILD_COMPLETIONS_KEY = Symbol.for(
+	"pi-subagents/observed-child-completions",
+);
 
 function readGlobalSlot<T>(key: symbol): T | undefined {
 	// SAFETY: `globalThis` has no index signature for our extension-private
@@ -869,6 +896,138 @@ configureWidgets({
 	context: () => runtime.latestCtx,
 	subagents: subagentWidgetEntries,
 });
+
+const childSessionIds =
+	readGlobalSlot<Map<string, string>>(CHILD_SESSION_IDS_KEY) ?? new Map();
+writeGlobalSlot(CHILD_SESSION_IDS_KEY, childSessionIds);
+/** Child sessions whose completion this process observed; adoption needs one. */
+const observedChildCompletions =
+	readGlobalSlot<Set<string>>(OBSERVED_CHILD_COMPLETIONS_KEY) ?? new Set();
+writeGlobalSlot(OBSERVED_CHILD_COMPLETIONS_KEY, observedChildCompletions);
+
+let shellJobsRuntime: ShellJobsRuntime | undefined;
+let shellJobsWidgetSnapshot: ShellJobWidgetEntry[] = [];
+let shellJobsSnapshotPending = false;
+
+interface SessionFileHeader {
+	id?: string;
+	parentSession?: string;
+}
+
+interface RawSessionFileHeader {
+	id?: unknown;
+	parentSession?: unknown;
+}
+
+function readSessionFileHeader(sessionFile: string): SessionFileHeader {
+	try {
+		const line = readFileSync(sessionFile, "utf8").split("\n", 1)[0];
+		// SAFETY: Pi session files start with a JSON header object; malformed input
+		// falls through the catch and yields no identity instead of throwing.
+		const header = JSON.parse(line) as RawSessionFileHeader;
+		return {
+			id: isString(header.id) ? header.id : undefined,
+			parentSession: isString(header.parentSession)
+				? header.parentSession
+				: undefined,
+		};
+	} catch {
+		return {};
+	}
+}
+
+function sessionIdForFile(sessionFile: string): string | undefined {
+	const cached = childSessionIds.get(sessionFile);
+	if (cached !== undefined) return cached;
+	const id = readSessionFileHeader(sessionFile).id;
+	if (id) childSessionIds.set(sessionFile, id);
+	return id;
+}
+
+/** Only an observed completion lets this process announce a child's job. */
+function observeChildCompletion(sessionFile: string): void {
+	const id = sessionIdForFile(sessionFile);
+	if (id) observedChildCompletions.add(id);
+}
+
+/** A child's session file names its parent session file; resolve that id. */
+function resolveParentSessionId(ctx: ExtensionContext): string | undefined {
+	const sessionFile = ctx.sessionManager.getSessionFile();
+	if (!sessionFile) return undefined;
+	const parentSession = readSessionFileHeader(sessionFile).parentSession;
+	return parentSession ? readSessionFileHeader(parentSession).id : undefined;
+}
+
+function runningWidgetEntries(
+	jobs: readonly ShellJob[],
+): ShellJobWidgetEntry[] {
+	return jobs
+		.filter((job) => job.state === "running")
+		.map((job) => ({
+			id: job.id,
+			label: job.label,
+			command: job.command,
+			startedAt: job.startedAt,
+		}));
+}
+
+function shellJobsWidgetEntries(): ShellJobWidgetEntry[] {
+	const current = shellJobsRuntime;
+	if (current && !shellJobsSnapshotPending) {
+		shellJobsSnapshotPending = true;
+		void current
+			.list()
+			.then((jobs) => {
+				shellJobsWidgetSnapshot = runningWidgetEntries(jobs);
+			})
+			.catch(() => {})
+			.finally(() => {
+				shellJobsSnapshotPending = false;
+			});
+	}
+	return shellJobsWidgetSnapshot;
+}
+
+async function syncShellJobsWidget(): Promise<void> {
+	const current = shellJobsRuntime;
+	if (!current) {
+		shellJobsWidgetSnapshot = [];
+		return;
+	}
+	const jobs = await current.list().catch(() => []);
+	shellJobsWidgetSnapshot = runningWidgetEntries(jobs);
+}
+
+function resetShellJobsHost(): void {
+	shellJobsRuntime?.close();
+	shellJobsRuntime = undefined;
+	shellJobsWidgetSnapshot = [];
+	shellJobsSnapshotPending = false;
+}
+
+setShellJobsSource(shellJobsWidgetEntries);
+
+function shellJobStateLabel(state: ShellJobState): string {
+	switch (state) {
+		case "succeeded":
+			return "succeeded";
+		case "failed":
+			return "failed";
+		case "unknown":
+			return "unknown (result could not be confirmed)";
+		case "cancelled":
+			return "cancelled";
+		case "error":
+			return "error";
+		default:
+			return "running";
+	}
+}
+
+function shortShellCommand(command: string, limit: number): string {
+	const oneLine = command.replace(/\s+/g, " ").trim();
+	return oneLine.length <= limit ? oneLine : `${oneLine.slice(0, limit)}…`;
+}
 
 export function shouldPreserveSubagentsOnShutdown(
 	reason: SessionShutdownEvent["reason"] | undefined,
@@ -2060,6 +2219,7 @@ function deliverPiCompletion(
 	io: PiSettlementIO,
 ): "delivered" | "suppressed" {
 	const running: RunningSubagent = record;
+	observeChildCompletion(running.sessionFile);
 	if (running.stopTimeout) clearTimeout(running.stopTimeout);
 	if (!shouldDeliverSubagentCompletion(running)) {
 		running.lifecycle = markDelivery(running.lifecycle, "suppressed");
@@ -2189,8 +2349,15 @@ export default function subagentsExtension(
 	options: {
 		cleanupOperations?: (ctx: ExtensionContext) => WorktreeCleanupOperations;
 		infrastructure?: PiRunSessionInfrastructure;
+		/** Test seams for the shell job runtime; production uses Herdr and disk. */
+		shellJobs?: {
+			surface?: ShellJobSurface;
+			clock?: ShellJobClock;
+			store?: ShellJobStore;
+		};
 	} = {},
 ) {
+	resetShellJobsHost();
 	runtime.pi = pi;
 	runtime.session = createDefaultRunSession(
 		{
@@ -2273,6 +2440,32 @@ export default function subagentsExtension(
 		runtime.session,
 	);
 	const parentSession = !process.env.PI_SUBAGENT_ID;
+
+	function ensureShellJobsRuntime(ctx: ExtensionContext): ShellJobsRuntime {
+		if (shellJobsRuntime) return shellJobsRuntime;
+		const sessionId = ctx.sessionManager.getSessionId();
+		const caller =
+			process.env.PI_SUBAGENT_NAME ?? process.env.PI_SUBAGENT_AGENT;
+		shellJobsRuntime = createShellJobsRuntime({
+			surface: options.shellJobs?.surface ?? createHerdrShellJobSurface(),
+			sessionId,
+			cwd: ctx.cwd,
+			maxPerTab: paneConfig.maxPerTab,
+			direction: paneConfig.direction,
+			store: options.shellJobs?.store,
+			clock: options.shellJobs?.clock,
+			delivery: createShellJobDelivery(pi),
+			parentSessionId: parentSession ? undefined : resolveParentSessionId(ctx),
+			callerLabel: parentSession ? undefined : caller,
+			observedChildCompletions,
+			herdrBin: process.env.HERDR_BIN_PATH,
+		});
+		return shellJobsRuntime;
+	}
+
+	function shellJobsUnavailable(): boolean {
+		return !options.shellJobs?.surface && !isShellJobsSurfaceAvailable();
+	}
 	// Report accepted no-op role settings once per parent extension load, not on
 	// every session transition, listing, or child launch.
 	let roleConfigDeprecationsReported = !parentSession;
@@ -2318,11 +2511,20 @@ export default function subagentsExtension(
 			refreshWidgets();
 			startStatusRefresh(pi);
 		}
+		try {
+			const shellJobs = ensureShellJobsRuntime(ctx);
+			await shellJobs.watch();
+			await syncShellJobsWidget();
+			refreshWidgets();
+		} catch {
+			// A missing shells store or pane surface must not block the host.
+		}
 	});
 
 	// Clean up on session shutdown
 	pi.on("session_shutdown", async (event, _ctx) => {
 		stopWidgets();
+		resetShellJobsHost();
 		if (statusInterval) {
 			clearInterval(statusInterval);
 			statusInterval = null;
@@ -2356,6 +2558,257 @@ export default function subagentsExtension(
 	);
 
 	const shouldRegister = (name: string) => !deniedTools.has(name);
+
+	if (shouldRegister("bg_shell"))
+		pi.registerTool({
+			name: "bg_shell",
+			label: "Background Shell",
+			description:
+				"Start a long-running, non-interactive shell command asynchronously in a new Herdr tab of the current " +
+				"workspace and return immediately with a job id. Output is shown live in the tab and saved to a log. " +
+				"When the command finishes, Pi is notified automatically and resumes this session with the exit code and " +
+				"a log tail. Prefer this over bash for builds, full test suites, migrations, or anything likely to take " +
+				"several minutes and safe to run without interaction. Use bash for quick, interactive, or ordering-critical " +
+				"commands that must finish before continuing. Do not poll the job: wait for the automatic notification.",
+			promptSnippet:
+				"Run long, non-interactive commands asynchronously in a Herdr tab and resume when they finish",
+			promptGuidelines: [
+				"Prefer bg_shell over bash for commands likely to take several minutes (full builds, entire test suites, long migrations) when they are non-interactive and safe to run asynchronously.",
+				"Keep using bash for quick, interactive, or order-dependent commands that must complete before the next step.",
+				"After starting a bg_shell job, continue other work or stop; do not poll. Pi is woken automatically with the result.",
+				"Keep bg_shell commands streaming: never pipe a long-running command to tail/head/grep inside the command string, it buffers all output so the Herdr tab and the log stay empty until the end. Let output flow and read bounded fragments afterwards with bg_shell_status log (mode/lines/grep).",
+			],
+			parameters: Type.Object({
+				command: Type.String({
+					description:
+						"Shell command to run (non-interactive). Keep it streaming (no tail/head pipes); read bounded output afterwards via bg_shell_status.",
+				}),
+				cwd: Type.Optional(
+					Type.String({
+						description:
+							"Working directory. Defaults to the current session cwd.",
+					}),
+				),
+				label: Type.Optional(
+					Type.String({
+						description: "Short human-readable label for the job.",
+					}),
+				),
+			}),
+			async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+				if (shellJobsUnavailable()) {
+					throw new Error(
+						"bg_shell requires running inside Herdr (HERDR_ENV=1 with HERDR_BIN_PATH).",
+					);
+				}
+				const shellJobs = ensureShellJobsRuntime(ctx);
+				const started = await shellJobs.start(params);
+				await syncShellJobsWidget();
+				refreshWidgets();
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: [
+								"Background job started.",
+								`id: ${started.id}`,
+								`label: ${params.label || "-"}`,
+								`tab: ${started.tabId}`,
+								`pane: ${started.paneId}`,
+								`log: ${started.logPath}`,
+								"Pi will be notified automatically when it finishes; do not poll.",
+							].join("\n"),
+						},
+					],
+					details: {
+						jobId: started.id,
+						tabId: started.tabId,
+						paneId: started.paneId,
+						logPath: started.logPath,
+						state: "running",
+					},
+				};
+			},
+		});
+
+	if (shouldRegister("bg_shell_status"))
+		pi.registerTool({
+			name: "bg_shell_status",
+			label: "Background Shell Status",
+			description:
+				"Query shell jobs: list active and recent jobs, get one job's details and a bounded output " +
+				"preview, read a bounded head/tail fragment of a job log (optionally filtered with grep), or cancel a running job.",
+			promptSnippet:
+				"Query, read, or cancel background shell jobs started with bg_shell",
+			parameters: Type.Object({
+				action: Type.Optional(
+					Type.Union([
+						Type.Literal("list"),
+						Type.Literal("get"),
+						Type.Literal("log"),
+						Type.Literal("cancel"),
+					]),
+				),
+				job_id: Type.Optional(
+					Type.String({
+						description:
+							"Job id, required for action 'get', 'log' and 'cancel'.",
+					}),
+				),
+				all: Type.Optional(
+					Type.Boolean({
+						description: "List jobs from every Pi session, not just this one.",
+					}),
+				),
+				mode: Type.Optional(
+					Type.Union([Type.Literal("head"), Type.Literal("tail")], {
+						description:
+							"For action 'log': read from the start or the end. Default 'tail'.",
+					}),
+				),
+				lines: Type.Optional(
+					Type.Number({
+						description:
+							"For action 'log': how many lines to return (1-400, default 100).",
+					}),
+				),
+				grep: Type.Optional(
+					Type.String({
+						description:
+							"For action 'log': keep only lines matching this regular expression.",
+					}),
+				),
+			}),
+			async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+				const action = params.action ?? "list";
+				const shellJobs = ensureShellJobsRuntime(ctx);
+				await shellJobs.reconcile().catch(() => {});
+
+				if (action === "cancel") {
+					const job = await shellJobs.get(params.job_id ?? "");
+					if (!job) {
+						throw new Error(
+							`bg_shell_status: job not found: ${params.job_id || "(missing id)"}`,
+						);
+					}
+					const cancelled =
+						job.state === "running"
+							? ((await shellJobs.cancel(job.id)) ?? job)
+							: job;
+					await syncShellJobsWidget();
+					refreshWidgets();
+					return {
+						content: [
+							{
+								type: "text" as const,
+								text: `Job ${cancelled.id} is now ${cancelled.state}.`,
+							},
+						],
+						details: { jobId: cancelled.id, state: cancelled.state },
+					};
+				}
+
+				const jobs = await shellJobs.list({ all: params.all === true });
+				const visible = jobs.sort(
+					(left, right) => right.startedAt - left.startedAt,
+				);
+				const running = visible.filter((job) => job.state === "running");
+				const finished = visible
+					.filter((job) => job.state !== "running")
+					.slice(0, 10);
+
+				if (action === "get") {
+					const job = visible.find(
+						(candidate) => candidate.id === params.job_id,
+					);
+					if (!job) {
+						throw new Error(
+							`bg_shell_status: job not found: ${params.job_id || "(missing id)"}`,
+						);
+					}
+					const fragment = await shellJobs.readLog(job.id, {
+						mode: "tail",
+						lines: 100,
+					});
+					const preview = fragment?.text.trim() || "(no output)";
+					const text = [
+						`job: ${job.id}${job.label ? ` (${job.label})` : ""}`,
+						`command: ${job.command}`,
+						`cwd: ${job.cwd}`,
+						`state: ${shellJobStateLabel(job.state)}`,
+						`exit code: ${job.exitCode ?? "unknown"}`,
+						`duration: ${formatElapsedDuration((job.finishedAt ?? Date.now()) - job.startedAt)}`,
+						`tab: ${job.tabId}`,
+						`log: ${job.logPath}`,
+						job.note ? `note: ${job.note}` : "",
+						"",
+						"log tail:",
+						preview,
+					]
+						.filter(Boolean)
+						.join("\n");
+					return {
+						content: [{ type: "text" as const, text }],
+						details: {
+							jobId: job.id,
+							state: job.state,
+							exitCode: job.exitCode ?? null,
+							logPath: job.logPath,
+						},
+					};
+				}
+
+				if (action === "log") {
+					const job = visible.find(
+						(candidate) => candidate.id === params.job_id,
+					);
+					if (!job) {
+						throw new Error(
+							`bg_shell_status: job not found: ${params.job_id || "(missing id)"}`,
+						);
+					}
+					const mode: ShellJobLogMode =
+						params.mode === "head" ? "head" : "tail";
+					const fragment = await shellJobs.readLog(job.id, {
+						mode,
+						lines: params.lines,
+						grep: params.grep,
+					});
+					const body = fragment?.text.trim() || "(no matching output)";
+					const header = [
+						`job: ${job.id} state=${job.state} exit=${job.exitCode ?? "unknown"}`,
+						`log: ${job.logPath}`,
+						`mode=${mode} lines=${fragment?.lineCount ?? 0}/${params.lines ?? 100}${params.grep ? ` grep=${params.grep}` : ""}${fragment?.windowTruncated ? " (log larger than read window)" : ""}`,
+					].join("\n");
+					return {
+						content: [{ type: "text" as const, text: `${header}\n\n${body}` }],
+						details: {
+							jobId: job.id,
+							logPath: job.logPath,
+							mode,
+							lines: fragment?.lineCount ?? 0,
+						},
+					};
+				}
+
+				const format = (job: ShellJob) =>
+					`- ${job.id} [${job.state}] exit=${job.exitCode ?? "-"} :: ${shortShellCommand(job.label || job.command, 80)} (log: ${job.logPath})`;
+				const text = [
+					`shell jobs — running: ${running.length}`,
+					...running.map(format),
+					"",
+					`recent finished: ${finished.length}`,
+					...finished.map(format),
+				].join("\n");
+				return {
+					content: [{ type: "text" as const, text }],
+					details: {
+						running: running.map((job) => job.id),
+						finished: finished.map((job) => job.id),
+					},
+				};
+			},
+		});
 
 	if (parentSession) {
 		pi.registerTool({
@@ -3236,6 +3689,11 @@ export default function subagentsExtension(
 			pi.sendUserMessage(toolCall);
 		},
 	});
+
+	pi.registerMessageRenderer<ShellJobResultDetails>(
+		"bg_shell_result",
+		renderShellJobResult,
+	);
 
 	// ── subagent_result message renderer ──
 	pi.registerMessageRenderer("subagent_result", (message, options, theme) => {
