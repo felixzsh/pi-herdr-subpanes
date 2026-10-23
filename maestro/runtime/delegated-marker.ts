@@ -6,12 +6,12 @@ import {
 	type PaneTokenWrite,
 } from "../surfaces/herdr/herdr-socket.ts";
 
-/** The pane token the Pi Herdr Agents Sidebar plugin reads. */
+/** The pane token the Pi Herdr Background Sidebar plugin reads. */
 export const DELEGATED_MARKER_TOKEN = "piha_delegated_v1";
 /** Recently classified as a delegated child; never proof of a live occupant. */
 export const DELEGATED_MARKER_VALUE = "live";
 /** One stable source: a pane accepts sequenced reports from at most 32. */
-export const DELEGATED_MARKER_SOURCE = "pi-herdr-agents";
+export const DELEGATED_MARKER_SOURCE = "pi-herdr-bg";
 /** Bounds a leftover marker after the last write Herdr applied, not liveness. */
 export const DELEGATED_MARKER_TTL_MS = 15_000;
 /**

@@ -1,10 +1,10 @@
-# Pi Herdr Agents Sidebar
+# Pi Herdr Background Sidebar
 
-![Pi Herdr Agents: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-agents/main/docs/assets/pi-herdr-agents-gallery.png)
+![Pi Herdr Background: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-bg/main/docs/assets/pi-herdr-bg-gallery.png)
 
-> **Compatibility.** Sidebar support requires `pi-herdr-agents` version `3.2.0` or later. On macOS it requires a release newer than `3.2.1`.
+> **Compatibility.** Sidebar support requires `pi-herdr-bg` version `3.2.0` or later. On macOS it requires a release newer than `3.2.1`.
 
-An optional [Herdr](https://herdr.dev) plugin for [Pi Herdr Agents](../../README.md). It keeps your main agents easy to find in Herdr's Agents view while [Pi](https://github.com/earendil-works/pi) runs delegated children.
+An optional [Herdr](https://herdr.dev) plugin for [Pi Herdr Background](../../README.md). It keeps your main agents easy to find in Herdr's Agents view while [Pi](https://github.com/earendil-works/pi) runs delegated children.
 
 The plugin adds two actions. The extension in the main package marks each delegated child's pane, and Focus hides the marked rows.
 
@@ -21,7 +21,7 @@ The plugin adds two actions. The extension in the main package marks each delega
 - Herdr `0.9.0` or later. `0.9.0` is the first release with `agent.view.set` and `agent.view.clear`, the only Herdr methods the actions call, so the manifest declares `min_herdr_version = "0.9.0"`. The plugin was tested on `0.9.1` and `0.9.2-preview.2026-09-29-8e78f929d8f0`; other builds are untested. A build without the agent view API makes Focus and All fail with Herdr's error.
 - Linux or macOS. The manifest declares `linux` and `macos`. Windows is untested and not declared.
 - `node` on the `PATH` of the Herdr server. Herdr runs the actions as `node sidebar.mjs focus` and `node sidebar.mjs all`.
-- The `pi-herdr-agents` extension version `3.2.0` or later, installed in Pi with `sidebar.enabled` turned on. Without markers, Focus hides nothing. Versions `3.2.0` and `3.2.1` identify children through Linux `/proc`, so they mark nothing on macOS.
+- The `pi-herdr-bg` extension version `3.2.0` or later, installed in Pi with `sidebar.enabled` turned on. Without markers, Focus hides nothing. Versions `3.2.0` and `3.2.1` identify children through Linux `/proc`, so they mark nothing on macOS.
 - Herdr's Pi integration, installed in the Pi agent directory your parent and children use. The extension marks a child only while Herdr reports that child's own session file for its pane, and Herdr learns it from this integration. Check for `herdr-agent-state.ts` in `$PI_CODING_AGENT_DIR/extensions/`, or install it with `herdr integration install pi`.
 
 ## Install
@@ -33,7 +33,7 @@ Setup has two parts. Install the Herdr plugin, then enable markers in a compatib
 Install the plugin from GitHub. Herdr shows the manifest and commands for review:
 
 ```bash
-herdr plugin install giuseppecrj/pi-herdr-agents/plugins/sidebar
+herdr plugin install giuseppecrj/pi-herdr-bg/plugins/sidebar
 ```
 
 For another published branch, tag, or commit, add `--ref` followed by that revision. The revision must contain the plugin directory.
@@ -46,15 +46,15 @@ If Herdr's Pi integration is not installed yet, install it. It reports each Pi s
 herdr integration install pi
 ```
 
-If you do not already load `pi-herdr-agents` version `3.2.0` or later, install the latest npm release in Pi:
+If you do not already load `pi-herdr-bg` version `3.2.0` or later, install the latest npm release in Pi:
 
 ```bash
-pi install npm:pi-herdr-agents
+pi install npm:pi-herdr-bg
 ```
 
 Use `pi list` to check your existing package sources. If a copy from another source is enabled, disable that copy with `pi config` before loading the npm package. Do not load both copies. Start Pi inside Herdr.
 
-1. Open `$PI_CODING_AGENT_DIR/herdr-agents/config.json`. The default is `~/.pi/agent/herdr-agents/config.json`.
+1. Open `$PI_CODING_AGENT_DIR/herdr-bg/config.json`. The default is `~/.pi/agent/herdr-bg/config.json`.
 2. If the file does not exist, copy `config.json.example` from the extension there first. The extension rejects a `config.json` without its `status` section.
 3. Merge the `sidebar` section into the file. Keep the existing `status`, `models`, and other sections. Do not replace the file.
 
@@ -75,7 +75,7 @@ Use `pi list` to check your existing package sources. If a copy from another sou
 After you launch a new child and run Focus, a marked child with status `idle`, `working`, or `done` disappears from the Agents view while your main session stays. Blocked children remain visible. Run All to show the hidden row again. If nothing changes, read the action log:
 
 ```bash
-herdr plugin log list --plugin pi-herdr-agents.sidebar
+herdr plugin log list --plugin pi-herdr-bg.sidebar
 ```
 
 Then check the child's pane. It should report the child's session file as `agent_session` and carry the `piha_delegated_v1` token:
@@ -89,15 +89,15 @@ herdr pane get <child-pane-id>
 - [Requirements](#requirements), [Install](#install), [Use Focus and All](#use-focus-and-all)
 - [Troubleshooting](#troubleshooting), [Safety](#safety), [Uninstall](#uninstall)
 - [Which rows Focus hides](#which-rows-focus-hides), [What a marker proves](#what-a-marker-proves), [Reusing a delegated pane](#reusing-a-delegated-pane), [Limits](#limits)
-- Main package: [Pi Herdr Agents](../../README.md) and its [sidebar markers](../../docs/configuration.md#sidebar-markers) setting
+- Main package: [Pi Herdr Background](../../README.md) and its [sidebar markers](../../docs/configuration.md#sidebar-markers) setting
 
 ## Use Focus and All
 
 Run an action from the command line:
 
 ```bash
-herdr plugin action invoke pi-herdr-agents.sidebar.focus
-herdr plugin action invoke pi-herdr-agents.sidebar.all
+herdr plugin action invoke pi-herdr-bg.sidebar.focus
+herdr plugin action invoke pi-herdr-bg.sidebar.all
 ```
 
 To bind a key, add an entry like this to your Herdr config and pick a key you do not already use:
@@ -106,13 +106,13 @@ To bind a key, add an entry like this to your Herdr config and pick a key you do
 [[keys.command]]
 key = "prefix+g"
 type = "plugin_action"
-command = "pi-herdr-agents.sidebar.focus"
+command = "pi-herdr-bg.sidebar.focus"
 description = "hide delegated Pi children"
 ```
 
 Herdr keeps one agent view for the whole server. Focus replaces the view that was active, including a view that another tool set. All sends its clear with this plugin as the source, so Herdr clears the view only if this plugin owns it. If another tool replaced Focus, All leaves that view in place and reports which tool owns it.
 
-Each action writes one message to its log. Read it with `herdr plugin log list --plugin pi-herdr-agents.sidebar`. The exit status tells you what happened:
+Each action writes one message to its log. Read it with `herdr plugin log list --plugin pi-herdr-bg.sidebar`. The exit status tells you what happened:
 
 | Exit status | Meaning |
 | --- | --- |
@@ -144,7 +144,7 @@ A Herdr server restart drops the view and every marker. The plugin has no startu
 2. Remove the plugin:
 
    ```bash
-   herdr plugin uninstall pi-herdr-agents.sidebar
+   herdr plugin uninstall pi-herdr-bg.sidebar
    ```
 
 3. Set `sidebar.enabled` to `false`, or delete the `sidebar` key, and run `/reload` in each parent session. The reload clears the markers of children that are still running and stops renewing them. A marker whose clear does not reach Herdr expires within 15 seconds.
@@ -250,6 +250,6 @@ under Focus.
 - The marker follows the pane and can briefly outlast the child. See
   [Reusing a delegated pane](#reusing-a-delegated-pane).
 - Herdr allows at most 32 sequenced metadata sources per pane. The extension
-  uses the single source `pi-herdr-agents` for every marker.
+  uses the single source `pi-herdr-bg` for every marker.
 - The plugin has no popup, settings, or startup hook, and it does not hide
   workspaces or notifications.

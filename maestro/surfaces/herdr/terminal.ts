@@ -119,7 +119,7 @@ export function runScriptInPane(
 		options?.scriptPath ??
 		join(
 			tmpdir(),
-			"pi-herdr-subagent-scripts",
+			"pi-herdr-bg-subagent-scripts",
 			`cmd-${Date.now()}-${Math.random().toString(16).slice(2, 8)}.sh`,
 		);
 	mkdirSync(dirname(scriptPath), { recursive: true });

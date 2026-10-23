@@ -217,7 +217,7 @@ function worktreeSurfaceForLaunch(
  * rewrites its command line, so `--session` is never readiness evidence.
  * Nothing inside Pi reads it.
  */
-export const PI_LAUNCH_SESSION_ENV = "PI_HERDR_AGENTS_SESSION";
+export const PI_LAUNCH_SESSION_ENV = "PI_HERDR_BG_SESSION";
 
 export function isExpectedPiProcess(
 	process: {

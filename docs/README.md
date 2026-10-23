@@ -25,7 +25,7 @@ are evidence, not shipped contracts, when a later ADR supersedes them.
 
 The package runs asynchronous Pi children in Herdr and supports managed
 worktrees for writing tasks. It ships the
-[`pi-herdr-agents` operating skill](../skills/pi-herdr-agents/SKILL.md), but no
+[`pi-herdr-bg` operating skill](../skills/pi-herdr-bg/SKILL.md), but no
 agent roles or planning and review workflows. Project definitions, global
 definitions, and installed role packs provide roles
 ([ADR-0013](adr/0013-pack-neutral-execution-host.md)). A `read,bash` tool

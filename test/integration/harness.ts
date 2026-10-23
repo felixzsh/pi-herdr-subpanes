@@ -1,5 +1,5 @@
 /**
- * Integration test harness for Pi Herdr Agents.
+ * Integration test harness for Pi Herdr Background.
  *
  * Provides utilities to:
  * - Detect whether herdr is available

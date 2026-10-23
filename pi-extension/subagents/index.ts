@@ -345,7 +345,7 @@ function discoverAgentDefinitions(
 }
 
 function missingRoleMessage(agentName: string): string {
-	return `Agent "${agentName}" was not found. pi-herdr-agents ships no roles: define it in .pi/agents or the global agents directory, install a role pack that provides it, or omit agent for a bare launch.`;
+	return `Agent "${agentName}" was not found. pi-herdr-bg ships no roles: define it in .pi/agents or the global agents directory, install a role pack that provides it, or omit agent for a bare launch.`;
 }
 
 function formatAgentSource(agent: ListedAgentDefinition): string {

@@ -82,7 +82,7 @@ marker; each renewal first rereads that agent session from Herdr. A
 _Avoid_: liveness proof, ownership record, security boundary, per-run source, process identity
 
 **Sidebar Focus**:
-The Herdr agent view that the optional `pi-herdr-agents.sidebar` plugin sets
+The Herdr agent view that the optional `pi-herdr-bg.sidebar` plugin sets
 on request. It hides rows whose delegated marker is `live` while their status
 is idle, working, or done, and keeps blocked, unknown, and unmarked rows. All
 clears only this plugin's view and reports a view that another tool owns.
@@ -92,7 +92,7 @@ _Avoid_: hiding processes, notification filter, automatic view, popup
 The bounded check that a `/worktree` handoff's Pi is running before its
 workspace is focused: a Pi process in the root pane with the worktree cwd whose
 launch-time environment names the launched session in
-`PI_HERDR_AGENTS_SESSION`. Nothing inside Pi reads that marker.
+`PI_HERDR_BG_SESSION`. Nothing inside Pi reads that marker.
 _Avoid_: argv match, `--session` visibility, child-context hint
 
 **No-progress advisory**:
@@ -109,14 +109,14 @@ _Avoid_: Silent Pi reinterpretation, compatibility adapter
 
 **Pack-neutral host**:
 This package as an execution host that ships no agent roles and no planning or
-review workflows. Its only skill, `pi-herdr-agents`, is a general operating guide for its own
+review workflows. Its only skill, `pi-herdr-bg`, is a general operating guide for its own
 control tools. Role packs and project or global definitions supply every
 named role. An empty catalog is valid, and bare launches need no role.
 _Avoid_: Default role set, privileged pack, starter workflow
 
 **Role pack**:
 A separately installed Pi package that registers role definitions through the
-`pi-herdr-subagents:roles:discover:v1` event. Registered packs form the whole
+`pi-herdr-bg:roles:discover:v1` event. Registered packs form the whole
 package layer below global and project definitions; duplicate names across
 packs are disabled. A pack owns its roles' workflows, skills, prerequisites, and
 workflow glossary.

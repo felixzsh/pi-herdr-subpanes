@@ -40,7 +40,7 @@ test("continues writing the stable manifest owner value", () => {
 		writeWorktreeManifest(file, existing);
 		writeWorktreeManifest(file, { state: "removed", owner: "not-an-owner" });
 		const value = readWorktreeManifest(file)!;
-		assert.equal(value.owner, "pi-herdr-subagents");
+		assert.equal(value.owner, "pi-herdr-bg");
 		assert.equal(value.version, 1);
 		assert.equal(value.kind, "worktree-run");
 		assert.equal(value.baseSha, "base");

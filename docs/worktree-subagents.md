@@ -1,10 +1,10 @@
 # Worktree subagents
 
-This guide is the operational reference for running writing agents in isolated Git worktrees with `pi-herdr-agents`. For installation and everyday use, see the [README](../README.md). For the complete tool API and status model, see the [tools and lifecycle reference](tools.md). For the product and open-source research behind these choices, see the [research report](research/worktree-subagent-orchestration.md).
+This guide is the operational reference for running writing agents in isolated Git worktrees with `pi-herdr-bg`. For installation and everyday use, see the [README](../README.md). For the complete tool API and status model, see the [tools and lifecycle reference](tools.md). For the product and open-source research behind these choices, see the [research report](research/worktree-subagent-orchestration.md).
 
 ## Quick start
 
-Run Pi inside Herdr from a Git checkout, then give each independent writing task a unique branch. The examples name `worker`, `scout`, and `reviewer` roles; `pi-herdr-agents` ships no roles, so those names must come from an installed role pack or a project/global definition. Omit `agent` for a bare child.
+Run Pi inside Herdr from a Git checkout, then give each independent writing task a unique branch. The examples name `worker`, `scout`, and `reviewer` roles; `pi-herdr-bg` ships no roles, so those names must come from an installed role pack or a project/global definition. Omit `agent` for a bare child.
 
 ```typescript
 subagent({
@@ -53,7 +53,7 @@ For a worktree launch:
 - Uncommitted and untracked files from the parent checkout are not copied. Commit anything the child must see before spawning it, or pass the needed context in the task.
 - Worktree creation does not steal terminal focus.
 
-For an explicit interactive handoff, use `/worktree <worktree> [task]`. It creates the worktree from the current committed branch, forks the active conversation branch into the target-cwd session, launches a normal long-lived Pi process in the returned root pane, and focuses the destination workspace only after Pi startup is confirmed: a Pi process in the root pane's Herdr foreground list must have the worktree cwd and, in its launch-time environment (`/proc/<pid>/environ`), `PI_HERDR_AGENTS_SESSION` naming the forked session file. An unreadable environment (for example, a process that is exiting) never confirms startup. Command-line text is never evidence, because Pi rewrites its process title and Herdr then reports only `pi`. The confirmation reads Linux `/proc`; on other hosts it fails within its bounded wait and the launch-failure retention below applies. Use `/worktree list` to inspect managed worktrees whose source repositories are inside the current cwd subtree, including cross-session orphans. The original process and session remain intact; pane movement is not used to change a running shell's cwd.
+For an explicit interactive handoff, use `/worktree <worktree> [task]`. It creates the worktree from the current committed branch, forks the active conversation branch into the target-cwd session, launches a normal long-lived Pi process in the returned root pane, and focuses the destination workspace only after Pi startup is confirmed: a Pi process in the root pane's Herdr foreground list must have the worktree cwd and, in its launch-time environment (`/proc/<pid>/environ`), `PI_HERDR_BG_SESSION` naming the forked session file. An unreadable environment (for example, a process that is exiting) never confirms startup. Command-line text is never evidence, because Pi rewrites its process title and Herdr then reports only `pi`. The confirmation reads Linux `/proc`; on other hosts it fails within its bounded wait and the launch-failure retention below applies. Use `/worktree list` to inspect managed worktrees whose source repositories are inside the current cwd subtree, including cross-session orphans. The original process and session remain intact; pane movement is not used to change a running shell's cwd.
 
 `worktree` cannot be set in agent frontmatter and is not exposed by the `/subagent <agent> <task>` shorthand. It is selected per call to the `subagent` tool. Ordered model fallback lists are not supported for worktree subagents: a failed attempt retains its worktree and branch for review, so a retry cannot safely reuse the requested branch. A persistent specialist either holds one worktree lease for its full lifetime or runs read-only in an ordinary pane; it cannot be re-bound.
 
@@ -103,7 +103,7 @@ Before asking Herdr to create resources, the extension writes a manifest under:
 <parent-session-directory>/artifacts/<parent-session-id>/worktree-runs/<run-id>.json
 ```
 
-The manifest uses the stable owner identifier `pi-herdr-subagents`, retained for compatibility independently of the npm package name. It records the requested base and branch, observed workspace/pane/path, child session path, timestamps, state, and final Git handoff when available.
+The manifest uses the stable owner identifier `pi-herdr-bg`, retained for compatibility independently of the npm package name. It records the requested base and branch, observed workspace/pane/path, child session path, timestamps, state, and final Git handoff when available.
 
 Possible states are:
 

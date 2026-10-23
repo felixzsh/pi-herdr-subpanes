@@ -5,7 +5,7 @@ const roles = fileURLToPath(new URL("./roles", import.meta.url));
 
 export default function rolePack(pi: ExtensionAPI) {
 	const unsubscribe = pi.events.on(
-		"pi-herdr-subagents:roles:discover:v1",
+		"pi-herdr-bg:roles:discover:v1",
 		(request) => {
 			const discovery = request as {
 				apiVersion: number;

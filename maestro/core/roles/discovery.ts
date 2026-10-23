@@ -53,7 +53,7 @@ export interface AgentCatalog {
 	diagnostics: AgentDiagnostic[];
 }
 
-export const ROLE_PACK_DISCOVERY_EVENT = "pi-herdr-subagents:roles:discover:v1";
+export const ROLE_PACK_DISCOVERY_EVENT = "pi-herdr-bg:roles:discover:v1";
 
 export interface RolePackDiscoveryEvent {
 	apiVersion: 1;
@@ -289,7 +289,7 @@ function legacyExternalCliDiagnostic(
 	const resolvedAgentName = getFrontmatterValue(match[1], "name") ?? agentName;
 	return {
 		code: "external-cli-unsupported",
-		message: `Role "${resolvedAgentName}" requests external CLI "${cli}" in ${path}. pi-herdr-agents is Pi-only; remove the cli and cli-model fields and select Claude through an authenticated Pi provider/model ID.`,
+		message: `Role "${resolvedAgentName}" requests external CLI "${cli}" in ${path}. pi-herdr-bg is Pi-only; remove the cli and cli-model fields and select Claude through an authenticated Pi provider/model ID.`,
 		path,
 		agentName: resolvedAgentName,
 	};

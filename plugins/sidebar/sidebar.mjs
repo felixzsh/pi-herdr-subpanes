@@ -1,12 +1,12 @@
-// Pi Herdr Agents Sidebar: the Focus and All actions for Herdr's Agents view.
+// Pi Herdr Background Sidebar: the Focus and All actions for Herdr's Agents view.
 // Herdr may install only this directory, so the file uses Node built-ins only.
 import { realpathSync } from "node:fs";
 import net from "node:net";
 import { pathToFileURL } from "node:url";
 
-export const PLUGIN_ID = "pi-herdr-agents.sidebar";
+export const PLUGIN_ID = "pi-herdr-bg.sidebar";
 export const VIEW_SOURCE = `plugin:${PLUGIN_ID}`;
-// Written by the pi-herdr-agents extension on a delegated child's pane. "live"
+// Written by the pi-herdr-bg extension on a delegated child's pane. "live"
 // means recently classified as delegated, not proven alive at render time.
 export const MARKER_TOKEN = "piha_delegated_v1";
 export const MARKER_VALUE = "live";
@@ -144,7 +144,7 @@ function isAgentView(result) {
 }
 
 export const FOCUS_MESSAGE =
-	"Focus is on. The Agents view hides delegated Pi children that pi-herdr-agents " +
+	"Focus is on. The Agents view hides delegated Pi children that pi-herdr-bg " +
 	"marked in the last 15 seconds, unless they are blocked or their status is unknown. " +
 	"Focus replaced whatever agent view was active, including one set by another tool. " +
 	"Run All to show every agent again.";
@@ -161,7 +161,7 @@ export async function runAction(action, options) {
 	const socketPath = env.HERDR_SOCKET_PATH;
 	if (!socketPath) {
 		out.error(
-			"HERDR_SOCKET_PATH is not set. Run this action from Herdr: herdr plugin action invoke pi-herdr-agents.sidebar.focus",
+			"HERDR_SOCKET_PATH is not set. Run this action from Herdr: herdr plugin action invoke pi-herdr-bg.sidebar.focus",
 		);
 		return 1;
 	}

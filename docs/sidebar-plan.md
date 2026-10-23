@@ -1,4 +1,4 @@
-# Pi Herdr Agents Sidebar plan
+# Pi Herdr Background Sidebar plan
 
 > **Superseded marker evidence.** This plan's markers relied on the child's
 > Linux `/proc` process identity, and so the plugin declared only `linux`.
@@ -21,7 +21,7 @@ released. See [Implementation status](#implementation-status).
 
 Keep main agents easy to find while delegated children remain accessible through
 Herdr. Build the optional companion in `plugins/sidebar/`, in this repository.
-Its plugin ID is `pi-herdr-agents.sidebar`.
+Its plugin ID is `pi-herdr-bg.sidebar`.
 
 The first version exposes two explicit actions:
 

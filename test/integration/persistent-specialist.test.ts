@@ -232,7 +232,7 @@ for (const backend of backends) {
 			);
 
 			const policy = JSON.parse(
-				readFileSync(`${sessionFile}.pi-herdr-subagent-policy.json`, "utf8"),
+				readFileSync(`${sessionFile}.pi-herdr-bg-subagent-policy.json`, "utf8"),
 			);
 			assert.equal(policy.version, 2);
 			assert.equal(policy.persistent, true);
@@ -273,7 +273,7 @@ for (const backend of backends) {
 				"stopped session must be retained",
 			);
 			assert.equal(
-				existsSync(`${sessionFile}.pi-herdr-subagent-policy.json`),
+				existsSync(`${sessionFile}.pi-herdr-bg-subagent-policy.json`),
 				true,
 				"stopped policy must be retained",
 			);

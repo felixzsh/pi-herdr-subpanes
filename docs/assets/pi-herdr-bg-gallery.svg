@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title description">
-  <title id="title">Pi Herdr Agents — parallel agents for Pi</title>
+  <title id="title">Pi Herdr Background — parallel agents for Pi</title>
   <desc id="description">A dark terminal-inspired package banner showing a parent Pi session supervising parallel agents in Herdr: a read-only pane, an isolated worktree, and a retained session.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
@@ -100,7 +100,7 @@
       <rect width="1424" height="1" fill="#ffffff" fill-opacity="0.1"/>
       <circle cx="10" cy="41" r="6" fill="#59dcae" filter="url(#glow)"/>
       <text x="30" y="47" fill="#d6dde4" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17">non-blocking · supervised · recoverable</text>
-      <text x="1424" y="47" text-anchor="end" fill="#717d90" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">npm:pi-herdr-agents</text>
+      <text x="1424" y="47" text-anchor="end" fill="#717d90" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16">npm:pi-herdr-bg</text>
     </g>
   </g>
   <rect x="1" y="1" width="1598" height="898" rx="33" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="2"/>

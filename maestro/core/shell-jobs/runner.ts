@@ -10,7 +10,7 @@ import { dirname } from "node:path";
  * and never targets Pi's pane or tab.
  */
 export const RUNNER_SCRIPT = `#!/usr/bin/env bash
-# pi-herdr-agents shell job runner. Managed by the host; local edits are overwritten.
+# pi-herdr-bg shell job runner. Managed by the host; local edits are overwritten.
 set +e
 JOB="$1"; CMD_FILE="$2"; LOG="$3"; STATUS="$4"; CWD="$5"; PANE="$6"; HERDR_BIN="$7"
 mkdir -p "$(dirname "$LOG")" "$(dirname "$STATUS")" 2>/dev/null

@@ -83,7 +83,7 @@ import {
 	type PreparedRun,
 } from "./run-session.ts";
 
-// pi-herdr-agents extension; no owning session required
+// pi-herdr-bg extension; no owning session required
 export function observePiActivity(
 	input: { id: string; activityFile?: string; lifecycle: SubagentLifecycle },
 	observedAt: number,
@@ -102,7 +102,7 @@ export function observePiActivity(
 	};
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiLaunchSnapshot {
 	parent: {
 		cwd: string;
@@ -119,7 +119,7 @@ export interface PiLaunchSnapshot {
 	paneConfig: PaneConfig;
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiLaunchInput {
 	task: Task;
 	role: Role;
@@ -136,7 +136,7 @@ export interface PiLaunchInput {
 	/** Existing host normalization may re-read role files for each actual retry launch. */
 	prepareAttempt?(candidateIndex: number): PiAttemptSnapshot;
 }
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiAttemptSnapshot {
 	task: Task;
 	role: Role;
@@ -150,7 +150,7 @@ export interface PiAttemptSnapshot {
 	snapshot: PiLaunchSnapshot;
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiResumeInput {
 	taskId: string;
 	name: string;
@@ -159,18 +159,18 @@ export interface PiResumeInput {
 	autoExit?: boolean;
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export type PiWorktreeLaunch = WorktreeLaunch;
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export type WorktreeHandoffBase = Omit<
 	WorktreeLaunch,
 	"workspaceId" | "paneId"
 >;
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export type PiWorktreeHandoff = WorktreeHandoff;
 
 /** Structural view of the adapter's actual mutable child, not a copied registry row. */
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiRunRecord {
 	id: string;
 	name: string;
@@ -202,7 +202,7 @@ export interface PiRunRecord {
 	cancelState?: "requested" | "confirmed" | "unconfirmed";
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiStartedMetadata {
 	id: string;
 	name: string;
@@ -220,7 +220,7 @@ export interface PiStartedMetadata {
 	logicalId?: string;
 	generationId?: string;
 }
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiCompletedMetadata {
 	run: RunResult;
 	name: string;
@@ -242,7 +242,7 @@ export interface PiCompletedMetadata {
 	policyHash?: string;
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiPersistentEvent {
 	version: 1;
 	type: "task-done" | "help-request";
@@ -251,7 +251,7 @@ export interface PiPersistentEvent {
 	at: string;
 	message?: string;
 }
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiLedgerEntry {
 	task: string;
 	outcome:
@@ -266,17 +266,17 @@ export interface PiLedgerEntry {
 	policyHash: string;
 	at: string;
 }
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export type PiSendAcknowledgement =
 	| { id: string; task: string; inbox: string; outcome: "dispatched" }
 	| { error: string; task?: string; outcome?: "rejected-busy" };
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export type PiStopAcknowledgement =
 	| { id: string; name: string; status: "stop_requested" | "stop_pending" }
 	| { error: string; id?: string; name?: string };
 
 /** Narrow I/O for the existing host persistent policy, not a task scheduler. */
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiPersistentIO {
 	/** Raw events only; cursor indexes this array before generation filtering. */
 	readEvents(record: PiRunRecord): PiPersistentEvent[];
@@ -292,11 +292,11 @@ export interface PiPersistentIO {
 	recordStopped(record: PiRunRecord): void;
 }
 /** Run-scoped settlement I/O; only resumed acquisitions supply the late reader. */
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiSettlementIO extends PiPersistentIO {
 	readResumeResult?(): { summary: string; sessionFile: string };
 }
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiPersistentHostOperations {
 	send(
 		record: PiRunRecord,
@@ -311,13 +311,13 @@ export interface PiPersistentHostOperations {
 	drain(record: PiRunRecord, io: PiPersistentIO): void;
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiProgressEvidence {
 	updatedAt?: number;
 	classification: "blocked-tool" | "truncated-turn" | "generic-no-progress";
 	lastEntryKind: "assistant" | "tool-result" | "message" | "other" | "none";
 }
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiRunSessionHooks {
 	onSpawned?(
 		record: PiRunRecord,
@@ -332,7 +332,7 @@ export interface PiRunSessionHooks {
 		io: PiSettlementIO,
 	): void | DeliveryDecision | Promise<void | DeliveryDecision>;
 }
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiRunSessionInfrastructure {
 	surfaceProvider: SurfaceProvider;
 	launchOperations: PiLaunchOperations;
@@ -345,7 +345,7 @@ export interface PiRunSessionInfrastructure {
 	/** Sidebar marker session evidence; defaults to this pane's Herdr socket. */
 	markerSessionReader?: MarkerSessionReader;
 }
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface DefaultRunSessionOptions {
 	/** Test injection consumes the actual Stage 3 seams, not replacement launch logic. */
 	infrastructure?: PiRunSessionInfrastructure;
@@ -360,7 +360,7 @@ export interface DefaultRunSessionOptions {
 	/** Mark delegated children's panes for the Herdr sidebar plugin. */
 	sidebarMarkers?: boolean;
 }
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiWorktreeHandoffInput {
 	name: string;
 	task: string;
@@ -370,7 +370,7 @@ export interface PiWorktreeHandoffInput {
 	runtimePlan: ResolvedRuntimePlan;
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export interface PiRunSession extends RunSession {
 	handoffWorktree(
 		input: PiWorktreeHandoffInput,
@@ -408,7 +408,7 @@ export interface PiRunSession extends RunSession {
 	): Promise<void>;
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 interface PiEntry {
 	record: PiRunRecord;
 	started: PiStartedMetadata;
@@ -418,8 +418,8 @@ interface PiEntry {
 }
 // The previous facade carries its live composition explicitly across module replacement.
 // No module-local lookup can accidentally rediscover an owner.
-const OWNER = Symbol.for("pi-herdr-agents/PiRunSession-owner");
-// pi-herdr-agents extension
+const OWNER = Symbol.for("pi-herdr-bg/PiRunSession-owner");
+// pi-herdr-bg extension
 interface PiSessionOwner {
 	options: DefaultRunSessionOptions;
 	roles: Role[];
@@ -487,7 +487,7 @@ function resumeResultReader(
 	});
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export function createDefaultRunSession(
 	options: DefaultRunSessionOptions,
 	previous?: PiRunSession,
@@ -513,7 +513,7 @@ export function createDefaultRunSession(
 			options.infrastructure?.surfaceProvider ??
 			new HerdrSurfaceProvider({
 				paneConfig: loadPaneConfig(
-					join(options.configDir, "herdr-agents"),
+					join(options.configDir, "herdr-bg"),
 					options.configExamplePath,
 				),
 			});

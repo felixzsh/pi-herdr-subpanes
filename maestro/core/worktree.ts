@@ -51,7 +51,7 @@ export function isWorktreeManifest(value: JsonObject): boolean {
 	return (
 		value.version === 1 &&
 		value.kind === "worktree-run" &&
-		value.owner === "pi-herdr-subagents"
+		value.owner === "pi-herdr-bg"
 	);
 }
 
@@ -65,7 +65,7 @@ export function mergeWorktreeManifest(
 		...value,
 		version: 1,
 		kind: "worktree-run",
-		owner: "pi-herdr-subagents",
+		owner: "pi-herdr-bg",
 		updatedAt,
 	};
 }

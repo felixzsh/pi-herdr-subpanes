@@ -176,7 +176,7 @@ describe("PiHarnessAdapter", () => {
 			assert.equal(handle.worktree?.baseSha, "base-sha");
 			assert.equal(
 				readWorktreeManifest(handle.worktree!.manifestFile)?.owner,
-				"pi-herdr-subagents",
+				"pi-herdr-bg",
 			);
 			assert.equal(f.surface.listSurfaces().length, 1);
 			await assert.rejects(

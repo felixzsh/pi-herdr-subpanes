@@ -25,7 +25,7 @@ skills, not to this package. See
 
 This package is a pack-neutral execution host: it ships no agent roles, no
 `/plan` command, and no planning or review skills. Its one skill,
-`pi-herdr-agents`, is a general operating guide for the host. A named launch resolves
+`pi-herdr-bg`, is a general operating guide for the host. A named launch resolves
 `agent` from project definitions, global definitions, and roles registered by
 installed role packs, in that precedence order (see below). An empty catalog is
 valid. A bare launch without `agent` always works. An explicitly named role that
@@ -180,7 +180,7 @@ const roles = fileURLToPath(new URL("./roles", import.meta.url));
 
 export default (pi: any) => {
   const unsubscribe = pi.events.on(
-    "pi-herdr-subagents:roles:discover:v1",  // stable protocol identifier
+    "pi-herdr-bg:roles:discover:v1",  // stable protocol identifier
     (request: { apiVersion: number; register(path: string): void }) => {
       if (request.apiVersion === 1) request.register(roles);
     },
@@ -190,10 +190,10 @@ export default (pi: any) => {
 ```
 
 Install both packages through Pi; the role pack remains inert if
-`pi-herdr-agents` is absent:
+`pi-herdr-bg` is absent:
 
 ```bash
-pi install npm:pi-herdr-agents
+pi install npm:pi-herdr-bg
 pi install npm:@acme/security-roles
 ```
 
@@ -250,7 +250,7 @@ Compare definitions against the reference below and verify them with
 | `skills`      | string  | Comma-separated installed skill names to auto-load. Use this plural form for new definitions; legacy project/global definitions using singular `skill` remain compatible. |
 | `session-mode` | string | Default child-session mode: `standalone`, `lineage-only`, or `fork` |
 | `spawning`    | boolean | Set exactly `false` to deny all subagent-spawning tools under the exact unquoted key `spawning:`. Only one `true` or `false` declaration is accepted. |
-| `deny-tools`  | string  | One non-empty inline comma-separated `pi-herdr-agents` tool list to suppress under the exact unquoted key `deny-tools:`; this is not a universal cross-extension deny list. YAML lists, containers, multiline values, quotes, comments, noncanonical keys, and duplicates are rejected. |
+| `deny-tools`  | string  | One non-empty inline comma-separated `pi-herdr-bg` tool list to suppress under the exact unquoted key `deny-tools:`; this is not a universal cross-extension deny list. YAML lists, containers, multiline values, quotes, comments, noncanonical keys, and duplicates are rejected. |
 | `auto-exit`   | boolean | Auto-shutdown after Pi fully settles when the latest assistant turn does not end with `stopReason: "aborted"` — no `subagent_done` call needed. User input does not permanently disable auto-exit. Recommended for autonomous roles; not for interactive ones the user drives. Also determines the default value of `interactive` (see below). |
 | `interactive` | boolean | Override whether stall/recovery transitions wake the parent session. Defaults to the inverse of `auto-exit`: autonomous agents (`auto-exit: true`) are non-interactive and get stall pings; agents without `auto-exit` are interactive and stay quiet. Explicit values take precedence. |
 | `persistent` | boolean | Keep this role's specialist session open between tasks. Follow-up work uses `subagent_send`; persistent specialists cannot be resumed in v1. |
@@ -348,7 +348,7 @@ spawning: false
 
 ### `deny-tools`
 
-Fine-grained control over tools registered by `pi-herdr-agents`:
+Fine-grained control over tools registered by `pi-herdr-bg`:
 
 ```yaml
 ---

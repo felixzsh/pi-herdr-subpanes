@@ -16,7 +16,7 @@ Do not design a release that creates a GitHub Release without a successful npm p
 
 You need:
 
-- Permission to manage this repository's GitHub Actions settings and npm package access for `pi-herdr-agents`
+- Permission to manage this repository's GitHub Actions settings and npm package access for `pi-herdr-bg`
 - A clean local `main` branch
 
 The **CI** workflow (`.github/workflows/ci.yml`) runs on pushes and pull
@@ -51,7 +51,7 @@ The optional live-provider smoke test is not a release gate:
 PI_TEST_MODEL="openai-codex/gpt-5.6-luna" PI_TEST_TIMEOUT=180000 npm run test:integration:live
 ```
 
-Do not release from skipped Herdr tests. Confirm the package preview includes `README.md`, `CHANGELOG.md`, `AGENTS.md`, `docs/`, `config.json.example`, `examples/role-pack/`, and exactly `README.md`, `herdr-plugin.toml`, and `sidebar.mjs` under `plugins/sidebar/`, excludes the active `docs/sidebar-plan.md`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-agents/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`. Confirm it excludes plans, journals, sessions, prototypes, generated evidence, local `config.json` and `openspec/`, and that the worktree integration tests leave no test workspace behind. Durable user configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`; package-root configuration is ignored, so users must move an older file manually.
+Do not release from skipped Herdr tests. Confirm the package preview includes `README.md`, `CHANGELOG.md`, `AGENTS.md`, `docs/`, `config.json.example`, `examples/role-pack/`, and exactly `README.md`, `herdr-plugin.toml`, and `sidebar.mjs` under `plugins/sidebar/`, excludes the active `docs/sidebar-plan.md`, contains no `agents/` resources, no `skills/` resources other than the host-owned `skills/pi-herdr-bg/SKILL.md`, and no `pi-extension/subagents/plan-skill.md`, and excludes `pi-extension/subagents/workflow-worker.js`. Confirm it excludes plans, journals, sessions, prototypes, generated evidence, local `config.json` and `openspec/`, and that the worktree integration tests leave no test workspace behind. Durable user configuration is `$PI_CODING_AGENT_DIR/herdr-bg/config.json`; package-root configuration is ignored, so users must move an older file manually.
 
 ## npm authentication
 
@@ -59,10 +59,10 @@ Do not release from skipped Herdr tests. Confirm the package preview includes `R
 
 After the package exists on npm, steady-state releases use npm trusted publishing (OIDC). No long-lived `NPM_TOKEN` is required.
 
-1. Open the package settings for `pi-herdr-agents` on [npmjs.com](https://www.npmjs.com/).
+1. Open the package settings for `pi-herdr-bg` on [npmjs.com](https://www.npmjs.com/).
 2. Add a trusted publisher for GitHub Actions with:
    - Organization or user: `giuseppecrj`
-   - Repository: `pi-herdr-agents`
+   - Repository: `pi-herdr-bg`
    - Workflow filename: `publish.yml`
    - Allowed action: `npm publish`
 3. Confirm the release job has `permissions.id-token: write` and runs on a GitHub-hosted runner (already set in `.github/workflows/publish.yml`).
@@ -100,16 +100,16 @@ You can rerun a failed or incomplete release from **Actions → Release → Run 
 After the workflow succeeds, inspect the published package:
 
 ```bash
-npm view pi-herdr-agents
+npm view pi-herdr-bg
 ```
 
 Test installation through Pi:
 
 ```bash
-pi install npm:pi-herdr-agents
+pi install npm:pi-herdr-bg
 ```
 
-The package should appear at <https://pi.dev/packages/pi-herdr-agents> after the gallery indexes the npm release.
+The package should appear at <https://pi.dev/packages/pi-herdr-bg> after the gallery indexes the npm release.
 
 ## Troubleshooting
 
@@ -119,7 +119,7 @@ The workflow stops if the matching version tag already points to a different com
 
 ### npm rejects authentication
 
-Confirm that the trusted publisher matches owner `giuseppecrj`, repository `pi-herdr-agents`, and workflow `publish.yml`, that the job has `id-token: write`, and that the runner is GitHub-hosted. If a release reports that `NPM_TOKEN` is bootstrap-only, remove the secret and use the trusted publisher.
+Confirm that the trusted publisher matches owner `giuseppecrj`, repository `pi-herdr-bg`, and workflow `publish.yml`, that the job has `id-token: write`, and that the runner is GitHub-hosted. If a release reports that `NPM_TOKEN` is bootstrap-only, remove the secret and use the trusted publisher.
 
 ### npm reports that the version already exists
 

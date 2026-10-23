@@ -1535,7 +1535,7 @@ describe("Pi launch", () => {
 			);
 			const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
 			assert.equal(manifest.state, "running");
-			assert.equal(manifest.owner, "pi-herdr-subagents");
+			assert.equal(manifest.owner, "pi-herdr-bg");
 			assert.equal(manifest.paneId, "root-pane-1");
 			// The child records its own identity beside its session; the parent
 			// verifies it against this run, session, and root pane at readiness.
@@ -1903,7 +1903,7 @@ describe("Pi launch", () => {
 			);
 			assert.equal(child.cwd, worktreePath);
 			const childText = readFileSync(result.running.sessionFile, "utf8");
-			assert.match(childText, /pi-herdr-worktree-handoff/);
+			assert.match(childText, /pi-herdr-bg-worktree-handoff/);
 			assert.match(childText, /handoff\/feature/);
 			assert.match(childText, /Implement the bounded change\./);
 			assert.equal(
@@ -2017,7 +2017,7 @@ describe("Pi launch", () => {
 			assert.equal(existsSync(manifest.sessionFile), true);
 			assert.match(
 				readFileSync(manifest.sessionFile, "utf8"),
-				/pi-herdr-worktree-handoff/,
+				/pi-herdr-bg-worktree-handoff/,
 			);
 		});
 	});
@@ -2233,7 +2233,7 @@ describe("Pi launch", () => {
 			assert.equal(existsSync(manifest.sessionFile), true);
 			assert.match(
 				readFileSync(manifest.sessionFile, "utf8"),
-				/pi-herdr-worktree-handoff/,
+				/pi-herdr-bg-worktree-handoff/,
 			);
 			assert.equal(
 				readFileSync(request.parent.sessionFile, "utf8"),

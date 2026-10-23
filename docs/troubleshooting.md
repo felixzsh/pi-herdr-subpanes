@@ -15,7 +15,7 @@ If the entry exists, spawning and result extraction worked; investigate parent w
 Git package refs are pinned. To move an installed development copy back to the current `main`, install that ref explicitly and reload the active Pi session:
 
 ```bash
-pi install git:github.com/giuseppecrj/pi-herdr-agents@main
+pi install git:github.com/giuseppecrj/pi-herdr-bg@main
 # Then run /reload inside Pi.
 ```
 
@@ -70,4 +70,4 @@ Removal reports each blocker, such as dirty files, a live process, or an unknown
 
 ## Sidebar Focus hides nothing
 
-Check that `sidebar.enabled` is `true`, that you ran `/reload` in the parent, and that you launched the child after the reload. Run `herdr pane get <child-pane-id>`: the pane must report the child's session file as `agent_session`. If it reports none, install Herdr's Pi integration with `herdr integration install pi` in the agent directory children use, then launch new children. Read the plugin log with `herdr plugin log list --plugin pi-herdr-agents.sidebar`. See the plugin's [troubleshooting](../plugins/sidebar/README.md#troubleshooting).
+Check that `sidebar.enabled` is `true`, that you ran `/reload` in the parent, and that you launched the child after the reload. Run `herdr pane get <child-pane-id>`: the pane must report the child's session file as `agent_session`. If it reports none, install Herdr's Pi integration with `herdr integration install pi` in the agent directory children use, then launch new children. Read the plugin log with `herdr plugin log list --plugin pi-herdr-bg.sidebar`. See the plugin's [troubleshooting](../plugins/sidebar/README.md#troubleshooting).

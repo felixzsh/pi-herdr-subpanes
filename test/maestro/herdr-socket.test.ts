@@ -155,7 +155,7 @@ describe("pane token report", () => {
 			assert.equal(
 				await reportPaneToken(path, {
 					paneId: "w1:p2",
-					source: "pi-herdr-agents",
+					source: "pi-herdr-bg",
 					seq: 7,
 					token: "piha_delegated_v1",
 					value: "live",
@@ -166,7 +166,7 @@ describe("pane token report", () => {
 			assert.equal(
 				await reportPaneToken(path, {
 					paneId: "w1:p2",
-					source: "pi-herdr-agents",
+					source: "pi-herdr-bg",
 					seq: 8,
 					token: "piha_delegated_v1",
 					value: null,
@@ -180,7 +180,7 @@ describe("pane token report", () => {
 						method: "pane.report_metadata",
 						params: {
 							pane_id: "w1:p2",
-							source: "pi-herdr-agents",
+							source: "pi-herdr-bg",
 							seq: 7,
 							tokens: { piha_delegated_v1: "live" },
 							ttl_ms: 15_000,
@@ -190,7 +190,7 @@ describe("pane token report", () => {
 						method: "pane.report_metadata",
 						params: {
 							pane_id: "w1:p2",
-							source: "pi-herdr-agents",
+							source: "pi-herdr-bg",
 							seq: 8,
 							tokens: { piha_delegated_v1: null },
 						},
@@ -202,7 +202,7 @@ describe("pane token report", () => {
 	it("distinguishes a missing pane from other failures", async () => {
 		const write = {
 			paneId: "w1:p2",
-			source: "pi-herdr-agents",
+			source: "pi-herdr-bg",
 			seq: 1,
 			token: "piha_delegated_v1",
 			value: "live",

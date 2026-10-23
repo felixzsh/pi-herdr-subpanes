@@ -214,7 +214,7 @@ for (const backend of backends) {
 
 		/** Users seed config.json from the example, then add the sidebar key. */
 		function writeSidebarSetting(enabled: boolean) {
-			const configDir = join(env.dir, ".pi", "agent", "herdr-agents");
+			const configDir = join(env.dir, ".pi", "agent", "herdr-bg");
 			mkdirSync(configDir, { recursive: true });
 			const example = JSON.parse(
 				readFileSync(

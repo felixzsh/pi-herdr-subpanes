@@ -1,16 +1,16 @@
-# Pi Herdr Agents
+# Pi Herdr Background
 
-[![npm version](https://img.shields.io/npm/v/pi-herdr-agents)](https://www.npmjs.com/package/pi-herdr-agents)
-[![CI](https://github.com/giuseppecrj/pi-herdr-agents/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/giuseppecrj/pi-herdr-agents/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/pi-herdr-bg)](https://www.npmjs.com/package/pi-herdr-bg)
+[![CI](https://github.com/giuseppecrj/pi-herdr-bg/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/giuseppecrj/pi-herdr-bg/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![Pi Herdr Agents: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-agents/main/docs/assets/pi-herdr-agents-gallery.png)
+![Pi Herdr Background: a parent Pi session delegating to parallel child agents in dedicated Herdr panes, an isolated worktree and a retained session, with a live status widget.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-bg/main/docs/assets/pi-herdr-bg-gallery.png)
 
 Asynchronous subagents for [Pi](https://github.com/earendil-works/pi), running exclusively in [Herdr](https://herdr.dev).
 
 Delegate investigation, implementation, and review without blocking the parent session. Each child runs as a real Pi process in its own Herdr pane. Its result comes back to the parent automatically when it finishes.
 
-> **Agents:** load the operating guide with `/skill:pi-herdr-agents`. It covers launching, supervising, interrupting, cancelling, and resuming children, worktrees, persistent specialists, model routing, and configuration. The source is [`skills/pi-herdr-agents/SKILL.md`](skills/pi-herdr-agents/SKILL.md). Contributors: read [`AGENTS.md`](AGENTS.md).
+> **Agents:** load the operating guide with `/skill:pi-herdr-bg`. It covers launching, supervising, interrupting, cancelling, and resuming children, worktrees, persistent specialists, model routing, and configuration. The source is [`skills/pi-herdr-bg/SKILL.md`](skills/pi-herdr-bg/SKILL.md). Contributors: read [`AGENTS.md`](AGENTS.md).
 
 ## Contents
 
@@ -30,7 +30,7 @@ Delegate investigation, implementation, and review without blocking the parent s
 - **Conversation handoff.** `/worktree` continues the active Pi conversation in a new worktree and keeps the parent session.
 - **Pack-neutral roles.** Use project or global definitions and installable role packs. This package ships no default roles or workflows.
 - **Persistent specialists.** Keep one policy-bound Pi session for sequential, turn-based tasks.
-- **Optional sidebar focus.** The companion [Pi Herdr Agents Sidebar](plugins/sidebar/README.md) Herdr plugin hides marked delegated children from Herdr's Agents view while Focus is on. Markers are display only and follow the pane. See [Sidebar plugin](#sidebar-plugin).
+- **Optional sidebar focus.** The companion [Pi Herdr Background Sidebar](plugins/sidebar/README.md) Herdr plugin hides marked delegated children from Herdr's Agents view while Focus is on. Markers are display only and follow the pane. See [Sidebar plugin](#sidebar-plugin).
 
 ## Requirements
 
@@ -45,14 +45,14 @@ Other terminal multiplexers are not supported. Session startup skips worktree in
 Install from npm:
 
 ```bash
-pi install npm:pi-herdr-agents
+pi install npm:pi-herdr-bg
 ```
 
 Install project-locally, or try it for one run:
 
 ```bash
-pi install -l npm:pi-herdr-agents
-pi -e npm:pi-herdr-agents
+pi install -l npm:pi-herdr-bg
+pi -e npm:pi-herdr-bg
 ```
 
 Then start Pi inside Herdr:
@@ -105,7 +105,7 @@ The parent is the coordinator. Give each child one bounded outcome with its goal
 
 ## How it works
 
-![Pi Herdr Agents lifecycle: spawn a child, run it in Herdr, supervise live state, and deliver one bounded result to the parent.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-agents/main/docs/assets/async-subagent-lifecycle.png)
+![Pi Herdr Background lifecycle: spawn a child, run it in Herdr, supervise live state, and deliver one bounded result to the parent.](https://raw.githubusercontent.com/giuseppecrj/pi-herdr-bg/main/docs/assets/async-subagent-lifecycle.png)
 
 A `subagent` call selects the target checkout, reuses its Herdr workspace, and gives the child a pane in an extension-owned `Agents` tab. Four panes fit in each tab by default, and overflow opens another tab in the same workspace. Shell jobs use a separate extension-owned `shells` tab family in the selected checkout workspace. `panes.maxPerTab` and `panes.direction` govern both families, so the same cap and split direction apply to `Agents` and `shells`. The call launches a child Pi session and returns `started`. The parent watches Herdr process state and child activity and shows the result in a live widget:
 
@@ -146,9 +146,9 @@ Children get `caller_ping` to ask the parent for help. Interactive children also
 | --- | --- |
 | `/subagent <agent> <task>` | Launch a named role. `/subagent list` lists roles. |
 | `/worktree <name> [task]` | Continue this conversation in a new managed worktree. `/worktree list` and `/worktree remove <target>` manage them. |
-| `/skill:pi-herdr-agents` | Load the host operating guide. |
+| `/skill:pi-herdr-bg` | Load the host operating guide. |
 
-The main `subagent` parameters are `name`, `task`, `agent`, `model`, `thinking`, `fork`, `cwd`, `persistent`, `interactive`, and `worktree`. See [Parameters](docs/tools.md#parameters) for every parameter, and [Tools and lifecycle reference](docs/tools.md) for the full behavior of each tool. Live tool descriptions and these documents are authoritative. The `pi-herdr-agents` skill is a general operating guide.
+The main `subagent` parameters are `name`, `task`, `agent`, `model`, `thinking`, `fork`, `cwd`, `persistent`, `interactive`, and `worktree`. See [Parameters](docs/tools.md#parameters) for every parameter, and [Tools and lifecycle reference](docs/tools.md) for the full behavior of each tool. Live tool descriptions and these documents are authoritative. The `pi-herdr-bg` skill is a general operating guide.
 
 ## Choose models
 
@@ -245,9 +245,9 @@ A `read, bash` allowlist is not a read-only boundary, because shell commands can
 
 ## Sidebar plugin
 
-The optional [Pi Herdr Agents Sidebar](plugins/sidebar/README.md) Herdr plugin adds two actions. Focus hides delegated Pi children from Herdr's Agents view. All removes this plugin's filter. It needs:
+The optional [Pi Herdr Background Sidebar](plugins/sidebar/README.md) Herdr plugin adds two actions. Focus hides delegated Pi children from Herdr's Agents view. All removes this plugin's filter. It needs:
 
-- `pi-herdr-agents` version `3.2.0` or later, with `sidebar.enabled` turned on. On macOS, a release newer than `3.2.1`.
+- `pi-herdr-bg` version `3.2.0` or later, with `sidebar.enabled` turned on. On macOS, a release newer than `3.2.1`.
 - Linux or macOS
 - Herdr's Pi integration (`herdr integration install pi`), which reports each child's session to Herdr. The extension marks a child only while Herdr reports that child's own session.
 - Herdr `0.9.0` or later, the first release with the agent view API. Tested on `0.9.1` and `0.9.2-preview.2026-09-29-8e78f929d8f0`; other builds are untested.
@@ -258,10 +258,10 @@ Setup has two parts. Neither part works alone.
 1. Install the Herdr plugin. Herdr shows the manifest and commands for review:
 
    ```bash
-   herdr plugin install giuseppecrj/pi-herdr-agents/plugins/sidebar
+   herdr plugin install giuseppecrj/pi-herdr-bg/plugins/sidebar
    ```
 
-2. Open `$PI_CODING_AGENT_DIR/herdr-agents/config.json` (default `~/.pi/agent/herdr-agents/config.json`). If it does not exist, copy `config.json.example` from the installed package there first. The extension rejects a `config.json` without its `status` section.
+2. Open `$PI_CODING_AGENT_DIR/herdr-bg/config.json` (default `~/.pi/agent/herdr-bg/config.json`). If it does not exist, copy `config.json.example` from the installed package there first. The extension rejects a `config.json` without its `status` section.
 3. Merge the `sidebar` section into the file. Keep `status`, `models`, and every other section:
 
    ```json
@@ -276,8 +276,8 @@ Setup has two parts. Neither part works alone.
 5. Run Focus yourself. Installing or enabling the plugin never turns it on:
 
    ```bash
-   herdr plugin action invoke pi-herdr-agents.sidebar.focus
-   herdr plugin action invoke pi-herdr-agents.sidebar.all
+   herdr plugin action invoke pi-herdr-bg.sidebar.focus
+   herdr plugin action invoke pi-herdr-bg.sidebar.all
    ```
 
 Focus replaces the server-wide Agents view, including any filter set by another tool. All clears only this plugin's view and leaves another tool's view untouched.
@@ -286,7 +286,7 @@ Focus is display only. Hidden children keep running and still raise notification
 
 ## Configuration
 
-The durable configuration file is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`, default `~/.pi/agent/herdr-agents/config.json`. Package upgrades never overwrite it. Create it by copying the installed package's `config.json.example`. The extension reads it at startup, so run `/reload` after any change. A package-root `config.json` is ignored.
+The durable configuration file is `$PI_CODING_AGENT_DIR/herdr-bg/config.json`, default `~/.pi/agent/herdr-bg/config.json`. Package upgrades never overwrite it. Create it by copying the installed package's `config.json.example`. The extension reads it at startup, so run `/reload` after any change. A package-root `config.json` is ignored.
 
 | Key | Default | Controls |
 | --- | --- | --- |
@@ -306,7 +306,7 @@ See [Configuration](docs/configuration.md) for every key.
 - What it writes: per-launch artifacts under the parent session's `artifacts/<session-id>/` directory beside Pi's session store, which hold the child's full task text and any `systemPrompt` as Markdown files, activity snapshots and worktree manifests; and the child's own Pi session file. A managed worktree that carries its own `.pi/agent` directory receives that child's session inside the checkout. Treat task text as potentially sensitive when you share or inspect those files.
 - Managed worktree children record their PID, process start time, boot ID, and PID namespace in `<session>.process.json` beside their session. With [`sidebar.enabled`](docs/configuration.md#sidebar-markers), the parent reads each child pane's agent session from Herdr and reports one display-only pane token, `piha_delegated_v1`, on that pane through the Herdr socket. With the setting off, the extension writes no pane metadata.
 - Shell job state lives under `$PI_CODING_AGENT_DIR/shells/` (default `~/.pi/agent/shells/`). Set `PI_SHELLS_DIR` to override that root. Finished jobs and their files are retained for 14 days; a running job is never pruned. The earlier standalone `herdr-background-shell` extension is retired, and `PI_BG_SHELL_DISABLED` no longer applies. If you installed that extension, delete or rename `~/.pi/agent/extensions/herdr-background-shell/` and use `bg_shell` from this package instead.
-- To uninstall: first list and remove any retained worktrees while the extension is still loaded (`/worktree list`, then `/worktree remove <target>`), because those commands leave with the package. If you installed the optional sidebar plugin, remove it with `herdr plugin uninstall pi-herdr-agents.sidebar` (or `herdr plugin unlink` for a linked copy). Then run `pi remove npm:pi-herdr-agents`, and delete `$PI_CODING_AGENT_DIR/herdr-agents/` and the `artifacts/` directories above if you no longer want the configuration and launch records.
+- To uninstall: first list and remove any retained worktrees while the extension is still loaded (`/worktree list`, then `/worktree remove <target>`), because those commands leave with the package. If you installed the optional sidebar plugin, remove it with `herdr plugin uninstall pi-herdr-bg.sidebar` (or `herdr plugin unlink` for a linked copy). Then run `pi remove npm:pi-herdr-bg`, and delete `$PI_CODING_AGENT_DIR/herdr-bg/` and the `artifacts/` directories above if you no longer want the configuration and launch records.
 
 ## Troubleshooting
 
@@ -347,7 +347,7 @@ Run the deterministic integration suite from inside Herdr with `npm run test:int
 
 ## Acknowledgements
 
-This package builds on earlier open-source work by [HazAT/pi-interactive-subagents](https://github.com/HazAT/pi-interactive-subagents) and [0xRichardH/pi-herdr-subagents](https://github.com/0xRichardH/pi-herdr-subagents). The sub-agent status supervision and turn-only interruption features were inspired by [RepoPrompt](https://repoprompt.com/)'s sub-agent snapshot polling and run cancellation features.
+This package builds on earlier open-source work by [HazAT/pi-interactive-subagents](https://github.com/HazAT/pi-interactive-subagents) and [0xRichardH/pi-herdr-bg](https://github.com/0xRichardH/pi-herdr-bg). The sub-agent status supervision and turn-only interruption features were inspired by [RepoPrompt](https://repoprompt.com/)'s sub-agent snapshot polling and run cancellation features.
 
 ## License
 

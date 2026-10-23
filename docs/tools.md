@@ -1,6 +1,6 @@
 # Tools and lifecycle reference
 
-This page is the detailed reference for the tools, commands, and run lifecycle of `pi-herdr-agents`. For installation and everyday use, see the [README](../README.md). Configuration keys are in [Configuration](configuration.md), and role authoring is in [Roles and custom agents](roles.md).
+This page is the detailed reference for the tools, commands, and run lifecycle of `pi-herdr-bg`. For installation and everyday use, see the [README](../README.md). Configuration keys are in [Configuration](configuration.md), and role authoring is in [Roles and custom agents](roles.md).
 
 ## What's Included
 
@@ -24,7 +24,7 @@ This page is the detailed reference for the tools, commands, and run lifecycle o
 
 | Skill | Description |
 | ----- | ----------- |
-| `pi-herdr-agents` | Operating guide for this host: launching, supervising, interrupting, cancelling and resuming children, worktrees, persistent specialists, model routing and configuration. Loaded by agents on demand; see the [operating skill](../skills/pi-herdr-agents/SKILL.md) |
+| `pi-herdr-bg` | Operating guide for this host: launching, supervising, interrupting, cancelling and resuming children, worktrees, persistent specialists, model routing and configuration. Loaded by agents on demand; see the [operating skill](../skills/pi-herdr-bg/SKILL.md) |
 
 | Pi child-only tool | Description |
 | ---------------- | ------------------------------------------------------------------------- |
@@ -388,7 +388,7 @@ is no other parent/child protocol.
 
 `/worktree <worktree> [task]` creates a Herdr-managed worktree from the current committed branch and launches a new interactive Pi session there with the active conversation branch. The original session remains available. Use `/worktree list` or `worktree_list({})` to inspect managed worktrees, including cross-session orphans, whose canonical source repositories are inside the session's cwd subtree. This is a new-process handoff, not an in-place move of the existing shell or Pi process.
 
-The destination workspace is focused only after Pi startup is confirmed. Every fresh launch, including the handoff, sets `PI_HERDR_AGENTS_SESSION` to its session file; confirmation requires a Pi process in the root pane with the worktree cwd whose launch-time environment carries that value. Pi rewrites its process title, so command-line text is never evidence. Nothing inside Pi reads the variable, and it is not a child-context hint. Confirmation reads Linux `/proc`; see [Worktree subagents](worktree-subagents.md).
+The destination workspace is focused only after Pi startup is confirmed. Every fresh launch, including the handoff, sets `PI_HERDR_BG_SESSION` to its session file; confirmation requires a Pi process in the root pane with the worktree cwd whose launch-time environment carries that value. Pi rewrites its process title, so command-line text is never evidence. Nothing inside Pi reads the variable, and it is not a child-context hint. Confirmation reads Linux `/proc`; see [Worktree subagents](worktree-subagents.md).
 
 ### Explicit worktree cleanup
 

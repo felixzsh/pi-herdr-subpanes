@@ -29,7 +29,7 @@ export interface OpenedPrimaryWorkspaceReport {
 }
 
 const openedPrimaryWorkspacesKey = Symbol.for(
-	"pi-herdr-agents:opened-primary-workspaces",
+	"pi-herdr-bg:opened-primary-workspaces",
 );
 
 interface OpenedPrimaryWorkspaceStore {

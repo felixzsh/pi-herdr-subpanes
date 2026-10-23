@@ -4,8 +4,8 @@ This page is the reference for the durable `config.json` settings and model pref
 
 ## Configuration file
 
-The durable user configuration is `$PI_CODING_AGENT_DIR/herdr-agents/config.json`,
-defaulting to `~/.pi/agent/herdr-agents/config.json`. It is not read from the
+The durable user configuration is `$PI_CODING_AGENT_DIR/herdr-bg/config.json`,
+defaulting to `~/.pi/agent/herdr-bg/config.json`. It is not read from the
 installed package root, so npm and git package upgrades do not overwrite it.
 Create it by copying the installed package's `config.json.example`.
 
@@ -89,7 +89,7 @@ project definitions keep their precedence over them.
 ## Sidebar markers
 
 Set `sidebar.enabled` to `true` to mark delegated children for the optional
-[Pi Herdr Agents Sidebar](../plugins/sidebar/README.md) Herdr plugin, whose Focus
+[Pi Herdr Background Sidebar](../plugins/sidebar/README.md) Herdr plugin, whose Focus
 action hides marked children from Herdr's Agents view. The setting defaults to
 `false`.
 

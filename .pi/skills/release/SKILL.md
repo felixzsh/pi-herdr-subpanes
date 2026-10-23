@@ -1,9 +1,9 @@
 ---
 name: release
-description: Release pi-herdr-agents when the user explicitly requests a release, version bump, or package publication. Run the complete local release gates, create the version commit, push main, and verify the GitHub release workflow.
+description: Release pi-herdr-bg when the user explicitly requests a release, version bump, or package publication. Run the complete local release gates, create the version commit, push main, and verify the GitHub release workflow.
 ---
 
-# Release pi-herdr-agents
+# Release pi-herdr-bg
 
 Read [`RELEASING.md`](../../../RELEASING.md) before you act. It is the canonical release contract.
 
@@ -33,5 +33,5 @@ Read [`RELEASING.md`](../../../RELEASING.md) before you act. It is the canonical
 The push triggers the GitHub **Release** workflow. It publishes to npm, then creates the matching tag and GitHub Release.
 
 1. If GitHub CLI access is available, inspect the workflow result. Otherwise report that publication is pending in **Actions**.
-2. After the workflow succeeds, run `npm view pi-herdr-agents` and confirm the published version.
+2. After the workflow succeeds, run `npm view pi-herdr-bg` and confirm the published version.
 3. Report the version, release commit, push result, workflow or publication state, every check result, and any required user action.

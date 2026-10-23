@@ -10,7 +10,7 @@ export function getAgentConfigDir(): string {
 }
 
 export function getSubagentsConfigDir(): string {
-	return join(getAgentConfigDir(), "herdr-agents");
+	return join(getAgentConfigDir(), "herdr-bg");
 }
 
 export function getSubagentsConfigPath(): string {

@@ -456,14 +456,14 @@ describe("Herdr marker transport", () => {
 				[
 					{
 						pane_id: PANE,
-						source: "pi-herdr-agents",
+						source: "pi-herdr-bg",
 						seq: 5,
 						tokens: { piha_delegated_v1: "live" },
 						ttl_ms: 15_000,
 					},
 					{
 						pane_id: PANE,
-						source: "pi-herdr-agents",
+						source: "pi-herdr-bg",
 						seq: 6,
 						tokens: { piha_delegated_v1: null },
 					},

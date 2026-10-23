@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title description">
-  <title id="title">Pi Herdr Agents asynchronous subagent lifecycle</title>
+  <title id="title">Pi Herdr Background asynchronous subagent lifecycle</title>
   <desc id="description">Four stages show the parent Pi session spawning a child, the child running in Herdr, supervision through process and activity signals, and one bounded result returning to the parent.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#060b13"/><stop offset="0.5" stop-color="#0b1624"/><stop offset="1" stop-color="#18121d"/></linearGradient>
@@ -82,7 +82,7 @@
     </g>
 
     <text x="78" y="966" fill="#717e91" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">Pi processes · Herdr surfaces · explicit ownership</text>
-    <text x="1522" y="966" text-anchor="end" fill="#717e91" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">npm:pi-herdr-agents</text>
+    <text x="1522" y="966" text-anchor="end" fill="#717e91" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15">npm:pi-herdr-bg</text>
   </g>
   <rect x="1" y="1" width="1598" height="998" rx="33" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="2"/>
 </svg>

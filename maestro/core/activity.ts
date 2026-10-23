@@ -19,7 +19,7 @@ export function isSubagentActivityScope(
 	return isString(value) && KNOWN_SCOPES.has(value);
 }
 
-// pi-herdr-agents extension
+// pi-herdr-bg extension
 export function projectActivity(
 	state: SubagentActivityState | undefined,
 ): ActivityReadResult {

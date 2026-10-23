@@ -850,7 +850,7 @@ describe("host adapter migration", () => {
 				},
 			};
 			const owner =
-				f.runtime.session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+				f.runtime.session[Symbol.for("pi-herdr-bg/PiRunSession-owner")];
 			const onObserved = owner.options.hooks.onObserved;
 			const observation = {
 				observedAt: Date.now(),
@@ -969,7 +969,7 @@ describe("host adapter migration", () => {
 					const session = f.runtime.session;
 					const controlTaskId = session.getControlTaskId(child.id);
 					const owner =
-						session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+						session[Symbol.for("pi-herdr-bg/PiRunSession-owner")];
 					const observed = owner.options.hooks.onObserved;
 					const completions: any[] = [];
 					owner.options.hooks.onObserved = (record: any, observation: any) => {
@@ -1660,7 +1660,7 @@ describe("host adapter migration", () => {
 					await assert.rejects(
 						f.launch({ name: "missing", task: "bounded", agent, worktree }),
 						new RegExp(
-							`Agent "${agent}" was not found\\. pi-herdr-agents ships no roles`,
+							`Agent "${agent}" was not found\\. pi-herdr-bg ships no roles`,
 						),
 					);
 			assert.equal(worktrees, 0);
@@ -1687,7 +1687,7 @@ describe("host adapter migration", () => {
 				/EISDIR/,
 			);
 			const owner =
-				f.runtime.session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+				f.runtime.session[Symbol.for("pi-herdr-bg/PiRunSession-owner")];
 			assert.equal(owner.entries.size, 0);
 			assert.equal(f.runtime.runningSubagents.size, 0);
 			assert.equal(f.registrations(), 0);
@@ -1728,7 +1728,7 @@ describe("host adapter migration", () => {
 					const session = f.runtime.session;
 					const control = session.getControlTaskId(child.id);
 					const owner =
-						session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+						session[Symbol.for("pi-herdr-bg/PiRunSession-owner")];
 					const corrupt = () => {
 						rmSync(path);
 						mkdirSync(path);
@@ -1864,7 +1864,7 @@ describe("host adapter migration", () => {
 				const child = f.runtime.runningSubagents.get(started.details.id);
 				const session = f.runtime.session;
 				const control = session.getControlTaskId(child.id);
-				const owner = session[Symbol.for("pi-herdr-agents/PiRunSession-owner")];
+				const owner = session[Symbol.for("pi-herdr-bg/PiRunSession-owner")];
 				const settled = owner.options.hooks.onSettled;
 				const late: any[] = [],
 					sends: any[] = [],
@@ -3970,7 +3970,7 @@ describe("shared subagent configuration path", () => {
 		try {
 			assert.equal(
 				getSubagentsConfigPath(),
-				"/tmp/custom-pi-agent/herdr-agents/config.json",
+				"/tmp/custom-pi-agent/herdr-bg/config.json",
 			);
 			assert.match(getSubagentsConfigExamplePath(), /config\.json\.example$/);
 		} finally {
@@ -4135,7 +4135,7 @@ describe("runtime reload configuration", () => {
 
 	it("refreshes pane-backed launch operations from the reloaded module config while preserving running children", async () => {
 		const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
-		// SAFETY: pi-herdr-agents owns this process-local runtime symbol.
+		// SAFETY: pi-herdr-bg owns this process-local runtime symbol.
 		const runtimeSlot = globalThis as RuntimeSlot;
 		const beforeRuntime = runtimeSlot[runtimeKey];
 		const beforeSurfaceProvider = beforeRuntime?.surfaceProvider;
@@ -4269,7 +4269,7 @@ describe("runtime reload configuration", () => {
 	});
 
 	it("upgrades a pre-refresh runtime slot that lacks provider fields", async () => {
-		// SAFETY: pi-herdr-agents owns this process-local runtime symbol.
+		// SAFETY: pi-herdr-bg owns this process-local runtime symbol.
 		const runtimeSlot = globalThis as RuntimeSlot;
 		const beforeRuntime = runtimeSlot[runtimeKey];
 		const runningSubagents = new Map<string, object>();
@@ -4287,7 +4287,7 @@ describe("runtime reload configuration", () => {
 	});
 
 	it("reports a legacy roles.bundled value once per parent load without rewriting config", async () => {
-		// SAFETY: pi-herdr-agents owns this process-local runtime symbol.
+		// SAFETY: pi-herdr-bg owns this process-local runtime symbol.
 		const runtimeSlot = globalThis as RuntimeSlot;
 		const beforeRuntime = runtimeSlot[runtimeKey];
 		const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
@@ -4942,14 +4942,14 @@ describe("role configuration", () => {
 		for (const bundled of [true, false]) {
 			const { deprecations } = parseRoleConfig(
 				{ roles: { bundled } },
-				"/agent/herdr-agents/config.json",
+				"/agent/herdr-bg/config.json",
 			);
 			assert.equal(deprecations.length, 1);
 			assert.match(
 				deprecations[0],
 				new RegExp(`roles\\.bundled \\(${bundled}\\).*is ignored`),
 			);
-			assert.match(deprecations[0], /\/agent\/herdr-agents\/config\.json/);
+			assert.match(deprecations[0], /\/agent\/herdr-bg\/config\.json/);
 			assert.match(deprecations[0], /Install a role pack/);
 			assert.match(deprecations[0], /The file was not changed/);
 		}
@@ -5046,7 +5046,7 @@ describe("subagent discovery", () => {
 
 				const { api } = createMockExtensionApi();
 				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
+					"pi-herdr-bg:roles:discover:v1",
 					(request: { register(path: string): void }) =>
 						request.register(rolesDir),
 				);
@@ -5572,7 +5572,7 @@ describe("subagent discovery", () => {
 			const { api, registeredTools, registeredCommands, sentUserMessages } =
 				createMockExtensionApi();
 			api.events.on(
-				"pi-herdr-subagents:roles:discover:v1",
+				"pi-herdr-bg:roles:discover:v1",
 				(request: { register(path: string): void }) =>
 					request.register(rolesDir),
 			);
@@ -5680,7 +5680,7 @@ describe("subagent discovery", () => {
 			const { api, registeredTools, registeredCommands } =
 				createMockExtensionApi();
 			api.events.on(
-				"pi-herdr-subagents:roles:discover:v1",
+				"pi-herdr-bg:roles:discover:v1",
 				(request: { register(path: string): void }) => {
 					request.register(firstRoles);
 					request.register(secondRoles);
@@ -5760,7 +5760,7 @@ describe("subagent discovery", () => {
 
 				const { api, registeredTools } = createMockExtensionApi();
 				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
+					"pi-herdr-bg:roles:discover:v1",
 					(request: { register(path: string): void }) =>
 						request.register(rolesDir),
 				);
@@ -5809,7 +5809,7 @@ describe("subagent discovery", () => {
 
 				const { api, registeredTools } = createMockExtensionApi();
 				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
+					"pi-herdr-bg:roles:discover:v1",
 					(request: { register(path: string): void }) =>
 						request.register(rolesDir),
 				);
@@ -5957,7 +5957,7 @@ describe("subagent discovery", () => {
 
 			const { api, registeredTools } = createMockExtensionApi();
 			api.events.on(
-				"pi-herdr-subagents:roles:discover:v1",
+				"pi-herdr-bg:roles:discover:v1",
 				(request: { register(path: string): void }) =>
 					request.register(rolesDir),
 			);
@@ -6091,7 +6091,7 @@ describe("subagent discovery", () => {
 
 				const { api, registeredTools } = createMockExtensionApi();
 				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
+					"pi-herdr-bg:roles:discover:v1",
 					(request: { register(path: string): void }) =>
 						request.register(rolesDir),
 				);
@@ -7901,7 +7901,7 @@ describe("commands", () => {
 				const { api, registeredCommands, sentUserMessages } =
 					createMockExtensionApi();
 				api.events.on(
-					"pi-herdr-subagents:roles:discover:v1",
+					"pi-herdr-bg:roles:discover:v1",
 					(request: { register(path: string): void }) =>
 						request.register(rolesDir),
 				);
@@ -11090,7 +11090,7 @@ describe("subagent interruption", () => {
 			);
 
 			const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
-			assert.equal(manifest.owner, "pi-herdr-subagents");
+			assert.equal(manifest.owner, "pi-herdr-bg");
 			assert.equal(manifest.kind, "worktree-run");
 			assert.equal(manifest.id, "run-1");
 			assert.equal(manifest.state, "failed");

@@ -46,7 +46,7 @@ const ordinaryReviewClauses = [
 ];
 // Host-owned operational skills are the only shipped skills; workflow skills
 // such as orchestrate and plan belong to role packs.
-const hostSkills = ["pi-herdr-agents"];
+const hostSkills = ["pi-herdr-bg"];
 const hostSkillFiles = new Set(hostSkills.map((n) => `skills/${n}/SKILL.md`));
 const packageFiles = new Set(
 	JSON.parse(
@@ -59,21 +59,21 @@ const packageFiles = new Set(
 
 describe("production package manifest", () => {
 	it("declares the public npm identity and publish metadata", () => {
-		assert.equal(manifest.name, "pi-herdr-agents");
+		assert.equal(manifest.name, "pi-herdr-bg");
 		assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
 		assert.equal(manifest.license, "MIT");
 		assert.equal(manifest.publishConfig?.access, "public");
 		assert.equal(
 			manifest.repository?.url,
-			"git+https://github.com/giuseppecrj/pi-herdr-agents.git",
+			"git+https://github.com/giuseppecrj/pi-herdr-bg.git",
 		);
 		assert.equal(
 			manifest.bugs?.url,
-			"https://github.com/giuseppecrj/pi-herdr-agents/issues",
+			"https://github.com/giuseppecrj/pi-herdr-bg/issues",
 		);
 		assert.equal(
 			manifest.homepage,
-			"https://github.com/giuseppecrj/pi-herdr-agents#readme",
+			"https://github.com/giuseppecrj/pi-herdr-bg#readme",
 		);
 		assert.equal(manifest.author?.name, "Giuseppe Rodriguez");
 		assert.equal(manifest.author?.url, "https://github.com/giuseppecrj");
@@ -227,13 +227,13 @@ describe("pack-neutral package contents", () => {
 	});
 
 	it("keeps shell job documentation aligned with the registered tools", () => {
-		const skill = readDoc("skills/pi-herdr-agents/SKILL.md");
+		const skill = readDoc("skills/pi-herdr-bg/SKILL.md");
 		for (const name of ["bg_shell", "bg_shell_status"])
 			for (const [label, content] of [
 				["README", readme],
 				["docs/tools.md", toolsDoc],
 				["docs/configuration.md", configurationDoc],
-				["skills/pi-herdr-agents/SKILL.md", skill],
+				["skills/pi-herdr-bg/SKILL.md", skill],
 			])
 				assert.ok(
 					normalized(content).includes(name),
