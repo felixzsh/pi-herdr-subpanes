@@ -1914,3 +1914,20 @@ test("persistent and resumed children are marked like fresh ones", () =>
 			"the resumed marker",
 		);
 	}));
+
+test("foreign previous sessions fail closed with a recognizable error", () => {
+	// SAFETY: stub stands in for an opaque facade; the factory throws before
+	// reading any member, and only the thrown error is inspected.
+	const foreign = {} as runtime.PiRunSession;
+	// SAFETY: stub stands in for validated factory options, unread: the
+	// foreign-previous guard throws before options are touched.
+	const options = {} as runtime.DefaultRunSessionOptions;
+	assert.throws(
+		() => runtime.createDefaultRunSession(options, foreign),
+		(error: Error) =>
+			runtime.isForeignPreviousSession(error) &&
+			error.message === runtime.FOREIGN_PREVIOUS_SESSION_MESSAGE,
+	);
+	assert.equal(runtime.isForeignPreviousSession(new Error("other")), false);
+	assert.equal(runtime.isForeignPreviousSession(undefined), false);
+});

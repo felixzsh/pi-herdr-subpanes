@@ -15,6 +15,8 @@ export { defaultRetainSurface } from "./surface-retention.ts";
 export {
 	createDefaultRunSession,
 	observePiActivity,
+	FOREIGN_PREVIOUS_SESSION_MESSAGE,
+	isForeignPreviousSession,
 } from "./pi-run-session.ts";
 export type {
 	DefaultRunSessionOptions,

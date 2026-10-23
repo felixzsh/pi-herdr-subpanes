@@ -419,6 +419,13 @@ interface PiEntry {
 // The previous facade carries its live composition explicitly across module replacement.
 // No module-local lookup can accidentally rediscover an owner.
 const OWNER = Symbol.for("pi-herdr-subpanes/PiRunSession-owner");
+export const FOREIGN_PREVIOUS_SESSION_MESSAGE =
+	"Previous PiRunSession does not carry its owning composition.";
+export function isForeignPreviousSession(error: any): boolean {
+	return (
+		error instanceof Error && error.message === FOREIGN_PREVIOUS_SESSION_MESSAGE
+	);
+}
 // pi-herdr-subpanes extension
 interface PiSessionOwner {
 	options: DefaultRunSessionOptions;
@@ -496,10 +503,7 @@ export function createDefaultRunSession(
 	const adopted =
 		previous &&
 		(previous as PiRunSession & { [OWNER]?: PiSessionOwner })[OWNER];
-	if (previous && !adopted)
-		throw new Error(
-			"Previous PiRunSession does not carry its owning composition.",
-		);
+	if (previous && !adopted) throw new Error(FOREIGN_PREVIOUS_SESSION_MESSAGE);
 	let state: PiSessionOwner;
 	let resumePi: (input: PiResumeInput) => Promise<AgentHandle>;
 	if (adopted) {

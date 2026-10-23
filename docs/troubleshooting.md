@@ -23,6 +23,17 @@ Smoke-test delivery with an autonomous subagent instructed to return one exact m
 
 Subagent tabs, panes, and worktree workspaces are created without stealing keyboard focus. Launch commands target child panes by explicit ID, so focus and command delivery are independent. If a fresh or resumed launch fails, the extension closes the ordinary pane that it created and preserves the original launch error. It does not close a caller-supplied surface, and managed worktree workspaces remain retained on failure. Note: the `interactive` option controls parent status notifications, not terminal focus.
 
+## The extension fails to load with a foreign previous session
+
+`Previous PiRunSession does not carry its owning composition` means the
+live process predates the installed build (for example, it started before
+a package rename) and handed a stale session to the reloaded extension.
+Run `/reload`: the host drops the stale session with a warning and starts
+fresh instead of failing the load. Runs in flight before the reload are no
+longer supervised and will not deliver results, so relaunch anything still
+needed. No session history is deleted; old shell-job state under
+`retired-extensions/` is inert and safe to leave alone.
+
 ## A child is stalled or makes no progress
 
 The widget shows `stalled` when pane inspection fails or the pane disappears without a completion record. Time alone never makes a run stalled. A no-progress advisory warns once per episode and never interrupts, kills, retries, or restarts a child. Interrupt the child with `subagent_interrupt`, end an ordinary run with `subagent_cancel`, or stop a persistent specialist with `subagent_stop`. See [In-progress status updates](tools.md#in-progress-status-updates) and [Supervision transport](configuration.md#supervision-transport).

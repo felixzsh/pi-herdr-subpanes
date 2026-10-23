@@ -14,7 +14,9 @@ import { randomUUID } from "node:crypto";
 import type { RunCancellation, Task } from "../../maestro/core/types.ts";
 import {
 	createDefaultRunSession,
+	isForeignPreviousSession,
 	observePiActivity,
+	type DefaultRunSessionOptions,
 	type PiRunSession,
 	type PiRunSessionInfrastructure,
 	type PiRunRecord,
@@ -1097,6 +1099,25 @@ export function selectCompletionApi<T>(previous: T, current: T | undefined): T {
 	return current ?? previous;
 }
 
+/**
+ * Adopt the previous composition across module replacement when it carries
+ * this build's ownership mark. A previous session from an older build
+ * (pre-rename) lacks the mark: drop it and start fresh instead of failing
+ * the whole extension load. Its in-flight runs are no longer supervised.
+ */
+function adoptPreviousSessionOrReset(
+	previous: PiRunSession | undefined,
+	create: (previous: PiRunSession | undefined) => PiRunSession,
+) {
+	if (!previous) return { session: create(undefined), dropped: false };
+	try {
+		return { session: create(previous), dropped: false };
+	} catch (error) {
+		if (!isForeignPreviousSession(error)) throw error;
+		return { session: create(undefined), dropped: true };
+	}
+}
+
 // ── Widget management ──
 
 /** Interval timer for status transition checks. */
@@ -1962,6 +1983,7 @@ export const __test__ = {
 	formatLivePersistentSpecialists,
 	runningSubagents,
 	formatElapsed,
+	adoptPreviousSessionOrReset,
 };
 
 function normalizePiAttempt(
@@ -2413,86 +2435,92 @@ export default function subagentsExtension(
 ) {
 	resetShellJobsHost();
 	runtime.pi = pi;
-	runtime.session = createDefaultRunSession(
-		{
-			configDir: getAgentConfigDir(),
-			configExamplePath: getSubagentsConfigExamplePath(),
-			roles: [],
-			forcePolling: supervisionConfig.forcePolling,
-			sidebarMarkers: sidebarConfig.enabled,
-			infrastructure: options.infrastructure,
-			getLaunchSnapshot() {
-				const ctx = runtime.latestCtx;
-				if (!ctx) throw new Error("No parent launch context");
-				const thinking = runtime.pi!.getThinkingLevel();
-				if (!isThinkingLevel(thinking))
-					throw new Error(`Unsupported parent thinking level: ${thinking}`);
-				return launchSnapshot(ctx, thinking);
+	const sessionOptions: DefaultRunSessionOptions = {
+		configDir: getAgentConfigDir(),
+		configExamplePath: getSubagentsConfigExamplePath(),
+		roles: [],
+		forcePolling: supervisionConfig.forcePolling,
+		sidebarMarkers: sidebarConfig.enabled,
+		infrastructure: options.infrastructure,
+		getLaunchSnapshot() {
+			const ctx = runtime.latestCtx;
+			if (!ctx) throw new Error("No parent launch context");
+			const thinking = runtime.pi!.getThinkingLevel();
+			if (!isThinkingLevel(thinking))
+				throw new Error(`Unsupported parent thinking level: ${thinking}`);
+			return launchSnapshot(ctx, thinking);
+		},
+		hooks: {
+			onSpawned(record) {
+				runningSubagents.set(record.id, record);
+				refreshWidgets();
+				startStatusRefresh(runtime.pi!);
 			},
-			hooks: {
-				onSpawned(record) {
-					runningSubagents.set(record.id, record);
+			onObserved(record, observation) {
+				const running: RunningSubagent = record;
+				if (observation.activityRead) {
+					const read = observation.activityRead;
+					running.activityRead = read.ok
+						? { ok: true }
+						: { ok: false, reason: read.reason, error: read.error };
+				}
+				if (observation.activity) running.activity = observation.activity;
+				if (
+					observation.kind !== "local-evidence" &&
+					observation.kind !== "tick" &&
+					observation.kind !== "refresh"
+				)
 					refreshWidgets();
-					startStatusRefresh(runtime.pi!);
-				},
-				onObserved(record, observation) {
-					const running: RunningSubagent = record;
-					if (observation.activityRead) {
-						const read = observation.activityRead;
-						running.activityRead = read.ok
-							? { ok: true }
-							: { ok: false, reason: read.reason, error: read.error };
-					}
-					if (observation.activity) running.activity = observation.activity;
-					if (
-						observation.kind !== "local-evidence" &&
-						observation.kind !== "tick" &&
-						observation.kind !== "refresh"
-					)
-						refreshWidgets();
-				},
-				onSettled: deliverPiCompletion,
 			},
-			persistent: {
-				send(record, text, io) {
-					const details = handleSubagentSend(
-						{ id: record.id, message: text },
-						io,
-					).details;
-					if (details.error)
-						return {
-							error: details.error,
-							task: details.task,
-							outcome:
-								details.outcome === "rejected-busy"
-									? details.outcome
-									: undefined,
-						};
+			onSettled: deliverPiCompletion,
+		},
+		persistent: {
+			send(record, text, io) {
+				const details = handleSubagentSend(
+					{ id: record.id, message: text },
+					io,
+				).details;
+				if (details.error)
 					return {
-						id: record.id,
-						task: details.task!,
-						inbox: details.inbox!,
-						outcome: "dispatched",
+						error: details.error,
+						task: details.task,
+						outcome:
+							details.outcome === "rejected-busy" ? details.outcome : undefined,
 					};
-				},
-				stop(record, timeout, io) {
-					const details = handleSubagentStop(
-						{ id: record.id },
-						runtime.pi!,
-						timeout,
-						io,
-					).details;
-					return details.error
-						? { error: details.error, id: details.id, name: details.name }
-						: { id: record.id, name: record.name, status: details.status! };
-				},
-				drain(record, io) {
-					if (runtime.pi) drainPersistentTaskEvents(record, runtime.pi, io);
-				},
+				return {
+					id: record.id,
+					task: details.task!,
+					inbox: details.inbox!,
+					outcome: "dispatched",
+				};
+			},
+			stop(record, timeout, io) {
+				const details = handleSubagentStop(
+					{ id: record.id },
+					runtime.pi!,
+					timeout,
+					io,
+				).details;
+				return details.error
+					? { error: details.error, id: details.id, name: details.name }
+					: { id: record.id, name: record.name, status: details.status! };
+			},
+			drain(record, io) {
+				if (runtime.pi) drainPersistentTaskEvents(record, runtime.pi, io);
 			},
 		},
-		runtime.session,
+	};
+	let droppedForeignPrevious = false;
+	const adopted = adoptPreviousSessionOrReset(runtime.session, (previous) =>
+		createDefaultRunSession(sessionOptions, previous),
 	);
+	runtime.session = adopted.session;
+	if (adopted.dropped) {
+		droppedForeignPrevious = true;
+		for (const running of runningSubagents.values())
+			if (running.stopTimeout) clearTimeout(running.stopTimeout);
+		runningSubagents.clear();
+	}
 	const parentSession = !process.env.PI_SUBAGENT_ID;
 
 	function ensureShellJobsRuntime(ctx: ExtensionContext): ShellJobsRuntime {
@@ -2546,6 +2574,17 @@ export default function subagentsExtension(
 	// subagents whose watchers survived a reload.
 	pi.on("session_start", async (_event, ctx) => {
 		runtime.latestCtx = ctx;
+		if (droppedForeignPrevious) {
+			droppedForeignPrevious = false;
+			ctx.ui.notify(
+				"Subagent supervision restarted: the previous session belonged " +
+					"to an older extension build and was not adopted. Runs in " +
+					"flight before the reload are no longer supervised and will " +
+					"not deliver results; relaunch anything still needed. No " +
+					"session history was deleted.",
+				"warning",
+			);
+		}
 		if (!roleConfigDeprecationsReported) {
 			roleConfigDeprecationsReported = true;
 			for (const message of roleConfig.deprecations)

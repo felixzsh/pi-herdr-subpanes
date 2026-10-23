@@ -156,6 +156,7 @@ import {
 import { HerdrSurfaceProvider } from "../maestro/surfaces/herdr/herdr-surface-provider.ts";
 import {
 	createDefaultRunSession,
+	FOREIGN_PREVIOUS_SESSION_MESSAGE,
 	type PiPersistentIO,
 	type PiRunSession,
 	type PiRunRecord,
@@ -10757,6 +10758,44 @@ describe("subagent interruption", () => {
 				true,
 			),
 			false,
+		);
+	});
+
+	it("drops a foreign previous session and starts fresh instead of failing load", () => {
+		const testApi = subagentsModule.__test__;
+		// SAFETY: stub stands in for an opaque session facade; only identity
+		// is compared, no facade members are read.
+		const fresh = {} as PiRunSession;
+		// SAFETY: same stub contract as above; compared by identity only.
+		const foreign = {} as PiRunSession;
+		const calls: Array<PiRunSession | undefined> = [];
+		const create = (previous: PiRunSession | undefined) => {
+			calls.push(previous);
+			if (previous === foreign)
+				throw new Error(FOREIGN_PREVIOUS_SESSION_MESSAGE);
+			return fresh;
+		};
+		const reset = testApi.adoptPreviousSessionOrReset(foreign, create);
+		assert.equal(reset.dropped, true);
+		assert.equal(reset.session, fresh);
+		assert.deepEqual(calls, [foreign, undefined]);
+		const kept = testApi.adoptPreviousSessionOrReset(undefined, create);
+		assert.equal(kept.dropped, false);
+		assert.equal(kept.session, fresh);
+		assert.deepEqual(calls, [foreign, undefined, undefined]);
+	});
+
+	it("rethrows non-foreign session creation errors", () => {
+		const testApi = subagentsModule.__test__;
+		// SAFETY: stub stands in for an opaque session facade; only identity
+		// is passed through, no members are read.
+		const other = {} as PiRunSession;
+		assert.throws(
+			() =>
+				testApi.adoptPreviousSessionOrReset(other, () => {
+					throw new Error("boom");
+				}),
+			/boom/,
 		);
 	});
 
