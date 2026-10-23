@@ -37,30 +37,39 @@ function mainCheckoutNodeModules() {
 	}
 	if (!commonDir) return undefined;
 	// In a worktree the common dir is `<main>/.git`; in the main checkout it is
-	// `.git`, so the candidate resolves to the same directory either way.
+	// `.git`, so this candidate resolves to the same directory either way.
 	const root = dirname(join(process.cwd(), commonDir));
 	const candidate = join(root, "node_modules");
 	return existsSync(candidate) ? candidate : undefined;
 }
 
-const fallback = mainCheckoutNodeModules();
+const nodeModules = mainCheckoutNodeModules();
+const mainRequire = nodeModules
+	? createRequire(join(dirname(nodeModules), "package.json"))
+	: undefined;
 
-async function resolveBareSpecifier(specifier, context, nextResolve) {
+function isBareSpecifier(specifier) {
+	return (
+		!specifier.startsWith(".") &&
+		!specifier.startsWith("/") &&
+		!specifier.startsWith("file:") &&
+		!specifier.startsWith("node:") &&
+		!specifier.startsWith("data:")
+	);
+}
+
+/**
+ * `registerHooks` requires a synchronous resolver: it validates the returned
+ * object, so returning a promise fails with ERR_INVALID_RETURN_PROPERTY_VALUE.
+ */
+function resolveFromMainCheckout(specifier, context, nextResolve) {
 	try {
-		return await nextResolve(specifier, context);
+		return nextResolve(specifier, context);
 	} catch (error) {
-		if (!fallback) throw error;
-		if (
-			specifier.startsWith(".") ||
-			specifier.startsWith("/") ||
-			specifier.startsWith("file:") ||
-			specifier.startsWith("node:")
-		)
-			throw error;
-		const require = createRequire(join(fallback, "..", "package.json"));
+		if (!mainRequire || !isBareSpecifier(specifier)) throw error;
 		let resolved;
 		try {
-			resolved = require.resolve(specifier);
+			resolved = mainRequire.resolve(specifier);
 		} catch {
 			throw error;
 		}
@@ -70,4 +79,4 @@ async function resolveBareSpecifier(specifier, context, nextResolve) {
 
 // `--import` runs this module but does not install hooks by itself, so register
 // the resolver here. Without this the hook is dead code.
-registerHooks({ resolve: resolveBareSpecifier });
+if (nodeModules) registerHooks({ resolve: resolveFromMainCheckout });
