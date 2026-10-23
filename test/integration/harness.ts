@@ -79,7 +79,7 @@ const TEST_AGENTS_SRC = join(HARNESS_DIR, "agents");
 const EXTENSION_SOURCE = join(
 	PROJECT_ROOT,
 	"pi-extension",
-	"subagents",
+	"herdr-subpanes",
 	"index.ts",
 );
 
