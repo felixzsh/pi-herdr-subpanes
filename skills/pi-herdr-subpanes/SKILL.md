@@ -52,6 +52,7 @@ automatically; never poll for it.
 | `fork` | `true` forces a full-context fork of your session, `false` forces standalone; omit to follow the role's `session-mode`. |
 | `interactive` | Controls parent notifications only (silences stall/recovered pings); it does not affect terminal focus. Precedence: this argument, then the role's `interactive`, then the inverse of `auto-exit` (autonomous roles get pings, others stay quiet). Bare spawns default to autonomous auto-exit unless `interactive: true`. Exception: persistent specialists are always non-interactive unless this argument says otherwise (a persistent role's `interactive: true` is ignored), and they never auto-exit. |
 | `persistent` | Keep one specialist session alive for sequential tasks (see below). Rejected at the `persistent.maxAgents` cap (default 3). |
+| `force` | Bypass duplicate-completion suppression: launch even when an identical ordinary request already completed with the same tree state. Ordinary repeats with unchanged trees otherwise reuse the cached verdict instead of launching. |
 | `worktree` | `{ branch, base? }` for an isolated Herdr-managed Git worktree (see below). Omit, or pass `null`, for an ordinary pane. |
 
 Label coordinated children `<task>-<role>[-n]`. Panes and tabs are created

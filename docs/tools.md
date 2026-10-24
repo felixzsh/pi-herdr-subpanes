@@ -145,6 +145,7 @@ subagent({
 | `tools`                | string  | —              | Comma-separated tool names                                                                        |
 | `cwd`                  | string  | —              | Working directory, or source repository when `worktree` is set (see [Role Folders](roles.md#role-folders)) |
 | `worktree`             | object \| null | —          | Isolated Herdr-managed Git worktree; requires `branch`, with optional `base` (committed `HEAD` by default). Omit or pass `null` to use an ordinary pane in `cwd` when a client requires the property. |
+| `force`                | boolean | `false`        | Bypass duplicate-completion suppression: launch even when an identical request already completed with the same tree state |
 
 A bare spawn's `systemPrompt` is not passed to Pi as a system prompt. The host
 prepends it as a role block to the child's first message, which is delivered
@@ -152,6 +153,18 @@ through a task artifact file referenced with `@path`. A full-context fork
 (`fork: true`) receives only the raw task, so its `systemPrompt` is dropped. Set
 `fork: false` when a bare child must receive reference or role text through
 `systemPrompt`.
+
+### Duplicate-completion suppression
+
+An identical ordinary `subagent` request (same agent, name, and task) that
+already completed with the same tree state does not launch a new child: the
+parent receives the cached verdict inline with status
+`duplicate-suppressed`. The gate compares the Git `HEAD` plus working-tree
+status at completion time against the new request, so a changed tree
+re-opens the gate and a repeat after a fix launches normally. Only
+successful ordinary completions record gates; cancelled, failed, worktree,
+persistent, and resume runs never suppress. Pass `force: true` to bypass the
+gate deliberately.
 
 ### Naming coordinated children
 

@@ -47,6 +47,10 @@ import {
 	resolveResumeDisplayName,
 } from "../../maestro/runtime/resume-display.ts";
 import {
+	checkDuplicateGate,
+	recordCompletedGate,
+} from "../../maestro/runtime/review-gates.ts";
+import {
 	buildAuthenticatedModelCatalog,
 	resolveRuntimePlan,
 	resolveRuntimePlans,
@@ -308,6 +312,13 @@ const SubagentParams = Type.Object({
 		Type.Boolean({
 			description:
 				"Keep this stable specialist session alive between turn-based tasks. Persistent agents accept follow-up work only through subagent_send.",
+		}),
+	),
+	force: Type.Optional(
+		Type.Boolean({
+			description:
+				"Bypass duplicate-completion suppression: launch even when " +
+				"an identical request already completed with the same tree state.",
 		}),
 	),
 	interactive: Type.Optional(
@@ -2463,6 +2474,25 @@ function deliverPiCompletion(
 		const presentationResult = io.readResumeResult
 			? { ...result, ...io.readResumeResult() }
 			: result;
+		// Idempotency gate: identical later requests reuse this verdict
+		// while the tree state is unchanged. Fail-open by construction.
+		if (
+			!running.persistent &&
+			!result.worktree &&
+			!result.errorMessage &&
+			result.exitCode === 0 &&
+			!io.readResumeResult
+		) {
+			recordCompletedGate({
+				childSessionFile: result.sessionFile ?? running.sessionFile,
+				launchScriptFile: running.launchScriptFile,
+				agent: running.agent,
+				name: running.name,
+				task: task.prompt,
+				summary: presentationResult.summary,
+				model: result.runtimePlan?.model,
+			});
+		}
 		const details: SubagentResultDetails = {
 			name: running.name,
 			task: task.prompt,
@@ -3029,6 +3059,8 @@ export default function subagentsExtension(
 			label: "Subagent",
 			description:
 				"Spawn a sub-agent in a dedicated terminal herdr pane, or in an isolated Herdr-managed Git worktree when worktree is provided. " +
+				"Identical ordinary requests already completed with the same " +
+				"tree state reuse their cached verdict unless force is true. " +
 				"Use ordinary panes for read-only tasks; a single or sequential writer can work in the parent checkout without a worktree. " +
 				"Reserve unique worktree branches for parallel independent writers starting from committed state — the worktree base is committed HEAD, so uncommitted parent changes are not copied. " +
 				"Worktree runs retain their workspace after completion for parent review; they are not pushed, merged, or removed automatically. " +
@@ -3040,6 +3072,8 @@ export default function subagentsExtension(
 				"After spawning, either end your turn immediately, or work on other independent tasks (including spawning more subagents in parallel). The harness will wake you with the result when it is ready.",
 			promptSnippet:
 				"Spawn a sub-agent in a dedicated terminal herdr pane, or in an isolated Herdr-managed Git worktree when worktree is provided. " +
+				"Identical ordinary requests already completed with the same " +
+				"tree state reuse their cached verdict unless force is true. " +
 				"Use ordinary panes for read-only tasks; a single or sequential writer can work in the parent checkout without a worktree. " +
 				"Reserve unique worktree branches for parallel independent writers starting from committed state — the worktree base is committed HEAD, so uncommitted parent changes are not copied. " +
 				"Worktree runs retain their workspace after completion for parent review; they are not pushed, merged, or removed automatically. " +
@@ -3106,7 +3140,8 @@ export default function subagentsExtension(
 					return muxUnavailableResult();
 				}
 
-				if (!ctx.sessionManager.getSessionFile()) {
+				const parentSessionFile = ctx.sessionManager.getSessionFile();
+				if (!parentSessionFile) {
 					return {
 						content: [
 							{
@@ -3115,6 +3150,28 @@ export default function subagentsExtension(
 							},
 						],
 						details: { error: "no session file" },
+					};
+				}
+
+				// Idempotency gate: an identical ordinary request already
+				// completed with the same tree state reuses its cached verdict.
+				const gateAgentDefs = params.agent
+					? loadAgentDefaults(params.agent, runtime.pi)
+					: null;
+				const gateCheck = checkDuplicateGate({
+					parentSessionFile,
+					agent: params.agent,
+					name: params.name,
+					task: params.task,
+					cwd: params.cwd ?? ctx.cwd,
+					force: params.force,
+					persistent: resolveEffectivePersistent(params, gateAgentDefs),
+					worktree: params.worktree != null,
+				});
+				if (gateCheck.suppressed) {
+					return {
+						content: [{ type: "text", text: gateCheck.text! }],
+						details: gateCheck.details!,
 					};
 				}
 
@@ -3289,6 +3346,18 @@ export default function subagentsExtension(
 							" " +
 							theme.fg("toolTitle", theme.bold(name)) +
 							theme.fg("dim", runtime + worktree),
+						0,
+						0,
+					);
+				}
+
+				// Duplicate suppression: answer from the cached verdict
+				if (details?.status === "duplicate-suppressed") {
+					return new Text(
+						theme.fg("accent", "▸") +
+							" " +
+							theme.fg("toolTitle", theme.bold(name)) +
+							theme.fg("dim", " — duplicate suppressed, cached verdict kept"),
 						0,
 						0,
 					);
