@@ -43,6 +43,10 @@ import {
 	type SubagentSessionMode,
 } from "../../maestro/core/roles/discovery.ts";
 import {
+	findResumedWorkerAgent,
+	resolveResumeDisplayName,
+} from "../../maestro/runtime/resume-display.ts";
+import {
 	buildAuthenticatedModelCatalog,
 	resolveRuntimePlan,
 	resolveRuntimePlans,
@@ -3342,9 +3346,9 @@ export default function subagentsExtension(
 			label: "Stop Persistent Specialist",
 			description:
 				"Stop a persistent specialist. The active task gets a " +
-					"bounded wait to settle, then the specialist is " +
-					"terminated; force skips the wait. Exit is confirmed " +
-					"before the specialist is removed.",
+				"bounded wait to settle, then the specialist is " +
+				"terminated; force skips the wait. Exit is confirmed " +
+				"before the specialist is removed.",
 			parameters: Type.Object({
 				id: Type.Optional(
 					Type.String({
@@ -3581,6 +3585,9 @@ export default function subagentsExtension(
 			label: "Resume Subagent",
 			description:
 				"Resume a previous Pi-backed sub-agent session in a new herdr pane. " +
+				"An omitted name defaults to the original worker name recovered " +
+				'from the session\'s launch artifacts ("Resume" when unrecoverable); ' +
+				'an explicit name that differs keeps both as "<explicit> (<original>)". ' +
 				"This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing workspace. " +
 				"This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
 				"When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
@@ -3589,6 +3596,9 @@ export default function subagentsExtension(
 				"Use when a sub-agent was cancelled or needs follow-up work.",
 			promptSnippet:
 				"Resume a previous Pi-backed sub-agent session in a new herdr pane. " +
+				"An omitted name defaults to the original worker name recovered " +
+				'from the session\'s launch artifacts ("Resume" when unrecoverable); ' +
+				'an explicit name that differs keeps both as "<explicit> (<original>)". ' +
 				"This does not reattach a retained managed worktree; continue worktree-bound follow-up in its existing workspace. " +
 				"This is a fire-and-forget async tool: the call returns immediately with only an acknowledgement. " +
 				"When the resumed sub-agent finishes, the harness AUTOMATICALLY delivers its result as a steer message that wakes you up and starts a new turn — you do not need to do anything to receive it. " +
@@ -3601,7 +3611,9 @@ export default function subagentsExtension(
 				}),
 				name: Type.Optional(
 					Type.String({
-						description: "Display name for the terminal tab. Default: 'Resume'",
+						description:
+							"Omitted names default to the original worker name " +
+							'("Resume" when unrecoverable).',
 					}),
 				),
 				message: Type.Optional(
@@ -3633,12 +3645,16 @@ export default function subagentsExtension(
 				// through this callback precisely enough for TypeScript to see that.
 				const details = result.details as any;
 				const name = details?.name ?? "Resume";
+				const agentTag = details?.agent
+					? theme.fg("dim", ` (${details.agent})`)
+					: "";
 
 				if (details?.status === "started") {
 					return new Text(
 						theme.fg("accent", "▸") +
 							" " +
 							theme.fg("toolTitle", theme.bold(name)) +
+							agentTag +
 							theme.fg("dim", " — resumed"),
 						0,
 						0,
@@ -3650,7 +3666,8 @@ export default function subagentsExtension(
 			},
 
 			async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-				const name = params.name ?? "Resume";
+				const name = resolveResumeDisplayName(params.sessionPath, params.name);
+				const agent = findResumedWorkerAgent(params.sessionPath);
 
 				if (!runtime.session!.availability().available) {
 					return muxUnavailableResult();
@@ -3694,6 +3711,7 @@ export default function subagentsExtension(
 					details: {
 						id,
 						name,
+						agent,
 						sessionPath: params.sessionPath,
 						launchScriptFile: started.launchScriptFile,
 						status: "started",

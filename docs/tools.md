@@ -340,7 +340,7 @@ The `caller_ping` tool lets a Pi-backed subagent request help from its parent ag
 **`subagent_resume` parameters (Pi-backed sessions):**
 
 - `sessionPath` (required): Path to the child session `.jsonl` file
-- `name` (optional): Display name for the resumed pane (defaults to `Resume`)
+- `name` (optional): Display name for the resumed pane. Omitted names default to the original worker name recovered from the session's launch artifacts (`Resume` when unrecoverable); an explicit name that differs keeps both as `<explicit> (<original>)`. The original agent role is shown alongside when recoverable.
 - `message` (optional): Follow-up prompt to send after resuming
 - `autoExit` (optional): Whether the resumed session should auto-exit after its next response fully settles. Defaults to `true` for autonomous follow-up work; set `false` when resuming for an interactive handoff.
 

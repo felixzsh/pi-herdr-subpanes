@@ -79,8 +79,10 @@ A child that needs help calls `caller_ping({ message })`. An ordinary child
 exits; resume it with `subagent_resume` and guidance. A persistent specialist
 stays alive; answer with `subagent_send`.
 
-`subagent_resume` takes `sessionPath` (required), `name` (pane label, default
-`Resume`), `message` (follow-up prompt), and `autoExit` (default `true`; set
+`subagent_resume` takes `sessionPath` (required), `name` (pane label; omitted
+names default to the original worker, explicit names that differ keep both
+as `<explicit> (<original>)`, and the original agent role is shown when
+recoverable), `message` (follow-up prompt), and `autoExit` (default `true`; set
 `false` for an interactive handoff). It restores the stored tool allowlist and
 denied tools, cannot change the model (use it only once the stored model is
 usable), and fails before creating a pane on a missing, malformed, or
